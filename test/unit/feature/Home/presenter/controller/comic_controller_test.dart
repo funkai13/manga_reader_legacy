@@ -76,39 +76,59 @@ void main() {
     });
   });
 
-  group('createBookmark', () {
+  group('updateReadingProgress', () {
+    setUp(() {
+      when(() => repo.addBookMark(any(), any())).thenAnswer((_) async {});
+      when(() => repo.markCompleted(any())).thenAnswer((_) async {});
+    });
+
     test('persists the page and updates only the matching comic', () async {
       await loaded();
-      when(() => repo.addBookMark(any(), any())).thenAnswer((_) async {});
 
-      final msg = await notifier().createBookmark(1, 7, comics.first);
+      await notifier().updateReadingProgress(1, 7, totalPages: 20);
 
-      expect(msg, 'Update success');
       verify(() => repo.addBookMark(1, 7)).called(1);
+      verifyNever(() => repo.markCompleted(any()));
       final list = state().value!;
       expect(list.firstWhere((c) => c.id == 1).currentReadPage, 7);
+      expect(list.firstWhere((c) => c.id == 1).isCompleted, isFalse);
       expect(list.firstWhere((c) => c.id == 2).currentReadPage, 4);
+    });
+
+    test('reaching the last page marks the comic as completed', () async {
+      await loaded();
+
+      await notifier().updateReadingProgress(2, 19, totalPages: 20);
+
+      verify(() => repo.markCompleted(2)).called(1);
+      final comic = state().value!.firstWhere((c) => c.id == 2);
+      expect(comic.isCompleted, isTrue);
+      expect(comic.currentReadPage, 19);
+    });
+
+    test('going back from the end keeps the comic completed', () async {
+      await loaded();
+      await notifier().updateReadingProgress(2, 19, totalPages: 20);
+      await notifier().updateReadingProgress(2, 3, totalPages: 20);
+      expect(state().value!.firstWhere((c) => c.id == 2).isCompleted, isTrue);
     });
 
     test('unknown id leaves the list untouched', () async {
       await loaded();
-      when(() => repo.addBookMark(any(), any())).thenAnswer((_) async {});
-      await notifier().createBookmark(99, 3, comics.first);
+      await notifier().updateReadingProgress(99, 3, totalPages: 10);
       expect(state().value!.map((c) => c.currentReadPage), [0, 4]);
     });
 
-    test(
-      'repository failure is reported (AsyncError / rethrow)',
-      () async {
-        await loaded();
-        when(() => repo.addBookMark(any(), any()))
-            .thenAnswer((_) => Future.error(Exception('write failed')));
+    test('a repository failure is rethrown and the list is kept', () async {
+      await loaded();
+      when(() => repo.addBookMark(any(), any()))
+          .thenAnswer((_) => Future.error(Exception('write failed')));
 
-        await expectLater(
-            notifier().createBookmark(1, 7, comics.first), throwsException);
-        expect(state().hasError, isTrue);
-      },
-    );
+      await expectLater(
+          notifier().updateReadingProgress(1, 7, totalPages: 20),
+          throwsException);
+      expect(state().value, comics);
+    });
   });
 
   group('markAsReading', () {

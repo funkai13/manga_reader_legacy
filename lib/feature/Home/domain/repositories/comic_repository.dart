@@ -12,6 +12,8 @@ abstract class ComicRepository {
 
   Future<void> startReadingComic(int id);
 
+  Future<void> markCompleted(int id);
+
   Future<void> deleteComic(int id);
   
   Future<void> updateComicMetadata({

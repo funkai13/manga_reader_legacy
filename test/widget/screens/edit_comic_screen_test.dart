@@ -115,9 +115,56 @@ void main() {
           id: 3,
           title: 'Old',
           author: 'Otomo',
-          genre: null,
-          collection: null,
+          genre: '',
+          collection: '',
           comicType: null,
+        )).called(1);
+  });
+
+  testWidgets('clearing author, genre and collection saves them empty',
+      (tester) async {
+    final repo = await pumpEdit(tester,
+        buildComic(id: 3, author: 'Oda', genre: 'Shonen', collection: 'OP'));
+
+    await tester.enterText(field('Autor'), '');
+    await tester.enterText(field('Género'), ' ');
+    await tester.enterText(field('Colección'), '');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.save));
+    await tester.pumpAndSettle();
+
+    verify(() => repo.updateComicMetadata(
+          id: 3,
+          title: any(named: 'title'),
+          author: '',
+          genre: '',
+          collection: '',
+          comicType: null,
+        )).called(1);
+  });
+
+  testWidgets('offers the three reading modes, including Webtoon',
+      (tester) async {
+    final repo = await pumpEdit(tester, buildComic(id: 3, comicType: 'Manga'));
+    final segmented = tester
+        .widget<SegmentedButton<String>>(find.byType(SegmentedButton<String>));
+    expect(segmented.segments.map((s) => s.value), ['Manga', 'Comic', 'Webtoon']);
+    expect(find.text('Derecha a izquierda'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Webtoon'));
+    await tester.tap(find.text('Webtoon'));
+    await tester.pumpAndSettle();
+    expect(find.text('Scroll vertical continuo'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.save));
+    await tester.pumpAndSettle();
+    verify(() => repo.updateComicMetadata(
+          id: 3,
+          title: any(named: 'title'),
+          author: any(named: 'author'),
+          genre: any(named: 'genre'),
+          collection: any(named: 'collection'),
+          comicType: 'Webtoon',
         )).called(1);
   });
 
@@ -128,8 +175,8 @@ void main() {
     await tester.enterText(field('Título'), 'Nuevo título');
     await tester.enterText(field('Autor'), 'Otomo');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Comic (Izq-Der)'));
-    await tester.tap(find.text('Comic (Izq-Der)'));
+    await tester.ensureVisible(find.text('Cómic'));
+    await tester.tap(find.text('Cómic'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.save));
@@ -139,8 +186,8 @@ void main() {
           id: 3,
           title: 'Nuevo título',
           author: 'Otomo',
-          genre: null,
-          collection: null,
+          genre: '',
+          collection: '',
           comicType: 'Comic',
         )).called(1);
     expect(find.byType(EditComicScreen), findsNothing);

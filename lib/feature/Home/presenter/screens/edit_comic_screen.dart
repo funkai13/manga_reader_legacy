@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:manga_reader/core/theme/colors.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
+import 'package:manga_reader/feature/Home/domain/entity/reading_mode.dart';
 import 'package:manga_reader/feature/Home/presenter/controller/comic_controller.dart';
 import 'package:manga_reader/feature/Home/presenter/widgets/custom_autocomplete_field.dart';
 
@@ -47,7 +48,7 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
   }
 
   Future<void> _save() async {
-    if (_titleController.text.isEmpty) {
+    if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('El título no puede estar vacío')),
       );
@@ -56,20 +57,20 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
 
     await ref.read(comicControllerProvider.notifier).updateComicMetadata(
           id: widget.comic.id!,
-          author: _authorController.text.isEmpty ? null : _authorController.text,
-          genre: _genreController.text.isEmpty ? null : _genreController.text,
-          collection: _collectionController.text.isEmpty
-              ? null
-              : _collectionController.text,
+          // '' clears the field (null would mean "leave unchanged").
+          author: _authorController.text.trim(),
+          genre: _genreController.text.trim(),
+          collection: _collectionController.text.trim(),
           // Only persist the type when the user actually picked one.
           comicType:
               _comicType != widget.comic.comicType ? _comicType : null,
-          title: _titleController.text,
+          title: _titleController.text.trim(),
         );
 
     if (mounted) {
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Cómic actualizado')),
       );
     }
@@ -222,17 +223,13 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
                   ),
                   SizedBox(height: 12.h * scale),
                   SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(
-                        value: 'Manga',
-                        label: Text('Manga (Der-Izq)'),
-                        icon: Icon(Icons.auto_stories),
-                      ),
-                      ButtonSegment(
-                        value: 'Comic',
-                        label: Text('Comic (Izq-Der)'),
-                        icon: Icon(Icons.menu_book),
-                      ),
+                    segments: [
+                      for (final mode in ReadingMode.values)
+                        ButtonSegment(
+                          value: mode.comicType,
+                          label: Text(mode.label),
+                          tooltip: mode.description,
+                        ),
                     ],
                     selected: {if (_comicType != null) _comicType!},
                     emptySelectionAllowed: _comicType == null,
@@ -251,6 +248,19 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
                               : AppColorsLight.accentColor,
                         ),
                       ),
+                    ),
+                  ),
+                  SizedBox(height: 8.h * scale),
+                  Text(
+                    _comicType == null
+                        ? 'Automático: se lee de izquierda a derecha'
+                        : ReadingMode.fromComicType(_comicType).description,
+                    style: TextStyle(
+                      fontSize: 13.sp * scale,
+                      color: (isDark
+                              ? AppColorsDark.textColor
+                              : AppColorsLight.textColor)
+                          .withValues(alpha: 0.7),
                     ),
                   ),
                   SizedBox(height: 40.h * scale),

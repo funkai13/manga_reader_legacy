@@ -85,24 +85,29 @@ class ComicController extends AsyncNotifier<List<ComicEntity>> {
     }
   }
 
-  Future<String> createBookmark(int id, int bookMark, ComicEntity comic) async {
+  /// Saves the page being read; reaching the last page marks the comic as
+  /// completed so it leaves "Continuar Leyendo".
+  Future<void> updateReadingProgress(
+    int id,
+    int page, {
+    required int totalPages,
+  }) async {
     final comicRepository = ref.read(comicRepositoryProvider);
-    try {
-      await comicRepository.addBookMark(id, bookMark);
-      state = state.whenData((comics) {
-        return comics.map((c) {
-          if (c.id == id) {
-            return c.copyWith(currentReadPage: bookMark);
-          }
-          return c;
-        }).toList();
-      });
+    await comicRepository.addBookMark(id, page);
+    final finished = totalPages > 0 && page >= totalPages - 1;
+    if (finished) await comicRepository.markCompleted(id);
 
-      return 'Update success';
-    } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
-      rethrow;
-    }
+    if (!ref.mounted) return;
+    state = state.whenData((comics) => [
+          for (final c in comics)
+            if (c.id == id)
+              c.copyWith(
+                currentReadPage: page,
+                isCompleted: c.isCompleted || finished,
+              )
+            else
+              c,
+        ]);
   }
 
   Future<void> markAsReading(int id) async {

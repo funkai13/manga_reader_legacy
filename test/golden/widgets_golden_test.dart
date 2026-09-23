@@ -5,11 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_reader/feature/Home/presenter/widgets/comic_card.dart';
-import 'package:manga_reader/feature/Home/presenter/widgets/comic_controls_overlay.dart';
 import 'package:manga_reader/feature/Home/presenter/widgets/comic_metadata_dialog.dart';
 import 'package:manga_reader/feature/Home/presenter/widgets/comics_grid.dart';
 import 'package:manga_reader/feature/Home/presenter/widgets/emtpy_comics_screen.dart';
-import 'package:manga_reader/feature/Home/presenter/widgets/long_press_overlay.dart';
 
 import '../helpers/widget/fakes.dart';
 import '../helpers/widget/golden.dart';
@@ -108,68 +106,6 @@ void main() {
         await tester.pumpAndSettle();
         await expectGolden(
             find.byType(EmptyComicsScreen), variant.file('empty_screen'));
-      });
-
-      testWidgets('reader controls overlay (comic mode)', (tester) async {
-        await covers.precache(tester);
-        await pumpGolden(
-          tester,
-          Scaffold(
-            backgroundColor: Colors.black,
-            body: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.file(covers.files.first, fit: BoxFit.contain),
-                ComicControlsOverlay(
-                  currentPageIndex: 11,
-                  totalPages: 40,
-                  mangaMode: false,
-                  isBookmarked: true,
-                  onBack: () {},
-                  onToggleBookmark: () {},
-                  onOpenPageGrid: () {},
-                  onToggleMangaMode: () {},
-                  onPageSelected: (_) {},
-                  onPreviewPageChanged: (_) {},
-                ),
-              ],
-            ),
-          ),
-          variant,
-        );
-        await expectGolden(
-            find.byType(Scaffold), variant.file('controls_overlay_comic'));
-      });
-
-      testWidgets('reader controls overlay (manga mode + long press)',
-          (tester) async {
-        await pumpGolden(
-          tester,
-          Scaffold(
-            backgroundColor: const Color(0xFF37474F),
-            body: Stack(
-              fit: StackFit.expand,
-              children: [
-                ComicControlsOverlay(
-                  currentPageIndex: 29,
-                  totalPages: 40,
-                  mangaMode: true,
-                  isBookmarked: false,
-                  onBack: () {},
-                  onToggleBookmark: () {},
-                  onOpenPageGrid: () {},
-                  onToggleMangaMode: () {},
-                  onPageSelected: (_) {},
-                  onPreviewPageChanged: (_) {},
-                ),
-                const LongPressOverlay(visible: true),
-              ],
-            ),
-          ),
-          variant,
-        );
-        await expectGolden(
-            find.byType(Scaffold), variant.file('controls_overlay_manga'));
       });
 
       testWidgets('comic metadata dialog', (tester) async {

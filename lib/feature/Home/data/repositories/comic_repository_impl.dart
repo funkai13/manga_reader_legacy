@@ -122,6 +122,11 @@ class ComicRepositoryImpl implements ComicRepository {
   }
 
   @override
+  Future<void> markCompleted(int id) async {
+    await datasource.updateComic(id: id, isCompleted: true);
+  }
+
+  @override
   Future<void> deleteComic(int id) {
     return datasource.deleteComic(id);
   }

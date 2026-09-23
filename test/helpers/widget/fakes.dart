@@ -3,14 +3,13 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Home/domain/provider/comic_provider.dart';
 import 'package:manga_reader/feature/Home/domain/repositories/comic_repository.dart';
-import 'package:manga_reader/feature/Home/presenter/controller/comic_viewer_controller.dart';
 import 'package:manga_reader/feature/Library/domain/entities/category_entity.dart';
+import 'package:manga_reader/feature/Reader/presenter/reader_controller.dart';
 import 'package:manga_reader/feature/Library/domain/providers/library_provider.dart';
 import 'package:manga_reader/feature/Library/domain/repositories/library_repository.dart';
 import 'package:mocktail/mocktail.dart';
@@ -129,6 +128,7 @@ MockComicRepository createComicRepository({
   when(() => repo.getComicByFilenameMatch(any())).thenAnswer((_) async => null);
   when(() => repo.addBookMark(any(), any())).thenAnswer((_) async {});
   when(() => repo.startReadingComic(any())).thenAnswer((_) async {});
+  when(() => repo.markCompleted(any())).thenAnswer((_) async {});
   when(() => repo.deleteComic(any())).thenAnswer((_) async {});
   when(() => repo.addComic(any())).thenAnswer((inv) async =>
       (inv.positionalArguments.first as ComicEntity).copyWith(id: 99));
@@ -172,8 +172,9 @@ MockLibraryRepository createLibraryRepository({
   return repo;
 }
 
-/// Viewer controller that never touches the file system.
-class FakeComicViewerController extends ComicViewerController {
+/// Stands in for the reader's page loading (no file system access).
+/// Records which comic was opened as `(imagesPath, id)`.
+class FakeComicViewerController {
   FakeComicViewerController({
     this.images = const [],
     this.error,
@@ -185,22 +186,11 @@ class FakeComicViewerController extends ComicViewerController {
   final bool neverLoads;
   final List<(String, int)> loadCalls = [];
 
-  @override
-  Future<List<File>> build() async => [];
-
-  @override
-  Future<void> loadComic(String imagesPath, int comicId) async {
-    loadCalls.add((imagesPath, comicId));
-    // Let the initial async build() settle first so it does not overwrite
-    // the state set below.
-    await future;
-    state = const AsyncLoading();
-    if (neverLoads) return;
-    if (error != null) {
-      state = AsyncError(error!, StackTrace.empty);
-      return;
-    }
-    state = AsyncData(images);
+  Future<List<File>> load(ComicEntity comic) {
+    loadCalls.add((comic.imagesPath, comic.id!));
+    if (neverLoads) return Completer<List<File>>().future;
+    if (error != null) return Future.error(error!);
+    return Future.value(images);
   }
 }
 
@@ -208,18 +198,17 @@ class FakeComicViewerController extends ComicViewerController {
 List<Override> testOverrides({
   ComicRepository? comicRepository,
   LibraryRepository? libraryRepository,
-  ComicViewerController Function()? viewerController,
+  FakeComicViewerController Function()? viewerController,
   bool useRealViewerController = false,
 }) {
+  final viewer = (viewerController ?? FakeComicViewerController.new)();
   return [
     comicRepositoryProvider
         .overrideWithValue(comicRepository ?? createComicRepository()),
     libraryRepositoryProvider
         .overrideWithValue(libraryRepository ?? createLibraryRepository()),
     if (!useRealViewerController)
-      comicViewerControllerProvider.overrideWith(
-        viewerController ?? () => FakeComicViewerController(),
-      ),
+      readerPagesProvider.overrideWith((ref, comic) => viewer.load(comic)),
   ];
 }
 
