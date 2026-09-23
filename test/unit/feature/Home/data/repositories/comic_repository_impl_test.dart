@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_reader/feature/Home/data/models/comic_fields.dart';
 import 'package:image/image.dart' as img;
@@ -11,6 +10,7 @@ import 'package:manga_reader/feature/Home/data/services/comic_storage.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Home/domain/exceptions/comic_exceptions.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:rar/rar.dart';
 import 'package:path/path.dart' as p;
 // ignore: depend_on_referenced_packages
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -19,6 +19,7 @@ import '../../../../helpers/archive_builder.dart';
 import '../../../../helpers/comic_fixtures.dart';
 import '../../../../helpers/db_stubs.dart';
 import '../../../../helpers/fake_path_provider.dart';
+import '../../../../helpers/fake_rar_platform.dart';
 import '../../../../helpers/mocks.dart';
 
 void main() {
@@ -30,14 +31,14 @@ void main() {
   late Directory appDocs; // fake getApplicationDocumentsDirectory()
   const newId = 42;
 
-  const unrarChannel = MethodChannel('unrar_file');
-  final messenger =
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  late FakeRarPlatform rar;
 
   setUpAll(registerCommonFallbacks);
 
   setUp(() {
     db = MockComicDatabase();
+    rar = FakeRarPlatform();
+    RarPlatform.instance = rar;
     sandbox = createTempDir('repo_src_');
     appDocs = createTempDir('repo_docs_');
     repo = ComicRepositoryImpl(db,
@@ -51,7 +52,6 @@ void main() {
   });
 
   tearDown(() {
-    messenger.setMockMethodCallHandler(unrarChannel, null);
     deleteQuietly(sandbox);
     deleteQuietly(appDocs);
   });
@@ -353,17 +353,9 @@ void main() {
       expect(leftovers(), isEmpty);
     });
 
-    group('CBR (unrar platform channel mocked)', () {
+    group('CBR (package:rar faked)', () {
       final rarMagic = [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x00, 0x00];
       final rar5Magic = [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x01, 0x00];
-
-      void onExtract(void Function(String dest) write) {
-        messenger.setMockMethodCallHandler(unrarChannel, (call) async {
-          expect(call.method, 'extractRAR');
-          write((call.arguments as Map)['destination_path'] as String);
-          return 'Extraction Success';
-        });
-      }
 
       void put(String dest, String relative, List<int> bytes) =>
           File(p.join(dest, relative))
@@ -373,53 +365,56 @@ void main() {
       test('keeps chapter order and same-named pages in sub-folders',
           () async {
         final file = writeRawFile(sandbox, 'x.cbr', rarMagic);
-        onExtract((dest) {
+        rar.onExtract = (dest) {
           put(dest, 'cap2/001.jpg', [21]);
           put(dest, 'cap1/002.png', [12]);
           put(dest, 'cap1/001.jpg', [11]);
           put(dest, 'cap10/001.jpeg', [101]);
           put(dest, 'info.txt', [0]);
-        });
+        };
 
         final result = await importFile(file);
 
+        expect(rar.extractedFrom, [file.path]);
         expect(result.totalPages, 4);
         expect(firstBytesInOrder(result.imagesPath), [11, 12, 21, 101]);
         expect(pageFiles(result.imagesPath),
             ['0001.jpg', '0002.png', '0003.jpg', '0004.jpeg']);
       });
 
+      test('RAR5 archives go through package:rar too', () async {
+        final file = writeRawFile(sandbox, 'v5.cbr', rar5Magic);
+        rar.onExtract = (dest) => put(dest, '01.jpg', [1]);
+        final result = await importFile(file);
+        expect(rar.extractedFrom, [file.path]);
+        expect(result.totalPages, 1);
+      });
+
       test('reads ComicInfo.xml from the RAR', () async {
         final file = writeRawFile(sandbox, 'x.cbr', rarMagic);
-        onExtract((dest) {
+        rar.onExtract = (dest) {
           put(dest, '01.jpg', [1]);
           File(p.join(dest, 'ComicInfo.xml'))
               .writeAsStringSync(comicInfoXml(manga: 'YesAndRightToLeft'));
-        });
+        };
         final result = await importFile(file);
         expect(result.comicType, 'Manga');
       });
 
-      test('extraction failure -> UnsupportedComicException mentioning CBR',
+      test('success: false -> UnsupportedComicException mentioning CBR',
           () async {
-        messenger.setMockMethodCallHandler(unrarChannel, (call) async {
-          throw PlatformException(code: 'extractionError', message: 'boom');
-        });
+        rar.result = {'success': false, 'message': 'Wrong password'};
         await expectRejected(writeRawFile(sandbox, 'y.cbr', rarMagic),
             message: 'CBR');
       });
 
-      test('RAR5 failure explains that RAR5 is not supported', () async {
-        messenger.setMockMethodCallHandler(unrarChannel, (call) async {
-          throw PlatformException(code: 'extractionError', message: 'boom');
-        });
+      test('a plugin exception -> UnsupportedComicException', () async {
+        rar.error = StateError('no native library');
         await expectRejected(writeRawFile(sandbox, 'y5.cbr', rar5Magic),
-            message: 'RAR5');
+            message: 'CBR');
       });
 
       test('RAR without images -> "no contiene imágenes"', () async {
-        messenger.setMockMethodCallHandler(
-            unrarChannel, (call) async => 'Extraction Success');
         await expectRejected(writeRawFile(sandbox, 'z.cbr', rarMagic),
             message: 'no contiene imágenes');
       });

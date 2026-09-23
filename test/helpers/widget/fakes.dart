@@ -7,9 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
-import 'package:manga_reader/feature/Home/domain/provider/comic_file_provider.dart';
 import 'package:manga_reader/feature/Home/domain/provider/comic_provider.dart';
-import 'package:manga_reader/feature/Home/domain/repositories/comic_file_repository.dart';
 import 'package:manga_reader/feature/Home/domain/repositories/comic_repository.dart';
 import 'package:manga_reader/feature/Home/presenter/controller/comic_viewer_controller.dart';
 import 'package:manga_reader/feature/Library/domain/entities/category_entity.dart';
@@ -21,7 +19,6 @@ class MockComicRepository extends Mock implements ComicRepository {}
 
 class MockLibraryRepository extends Mock implements LibraryRepository {}
 
-class MockComicFileRepository extends Mock implements ComicFileRepository {}
 
 class _FakeComicEntity extends Fake implements ComicEntity {}
 
@@ -214,14 +211,11 @@ List<Override> testOverrides({
   ComicViewerController Function()? viewerController,
   bool useRealViewerController = false,
 }) {
-  final fileRepo = MockComicFileRepository();
-  when(() => fileRepo.extractComic(any())).thenAnswer((_) async => []);
   return [
     comicRepositoryProvider
         .overrideWithValue(comicRepository ?? createComicRepository()),
     libraryRepositoryProvider
         .overrideWithValue(libraryRepository ?? createLibraryRepository()),
-    comicFileRepositoryProvider.overrideWithValue(fileRepo),
     if (!useRealViewerController)
       comicViewerControllerProvider.overrideWith(
         viewerController ?? () => FakeComicViewerController(),

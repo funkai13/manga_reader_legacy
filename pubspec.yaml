@@ -45,11 +45,8 @@ dependencies:
   vibration: ^3.1.3
   flutter_screenutil: ^5.9.3
   path: ^1.9.0
-  unrar_file:
-    git:
-      url: https://github.com/Makarov96/unrar_file_fork
-      ref: master
   image: ^4.10.1
+  rar: ^0.3.0
   
 
 

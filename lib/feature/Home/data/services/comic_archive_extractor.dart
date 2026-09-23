@@ -6,7 +6,7 @@ import 'package:archive/archive_io.dart';
 import 'package:image/image.dart' as img;
 import 'package:manga_reader/feature/Home/domain/exceptions/comic_exceptions.dart';
 import 'package:path/path.dart' as p;
-import 'package:unrar_file/unrar_file.dart';
+import 'package:rar/rar.dart';
 import 'package:xml/xml.dart';
 
 /// Extensions accepted as comic pages, shared with the viewer.
@@ -123,7 +123,7 @@ class ComicArchiveExtractor {
         return Isolate.run(() => _extractZip(archivePath, outputDir));
       case ArchiveKind.rar:
       case ArchiveKind.rar5:
-        return _extractRar(archivePath, outputDir, isRar5: kind == ArchiveKind.rar5);
+        return _extractRar(archivePath, outputDir);
       case ArchiveKind.unknown:
         throw UnsupportedComicException(
           'El archivo no es un CBZ/CBR válido o está corrupto.',
@@ -131,22 +131,25 @@ class ComicArchiveExtractor {
     }
   }
 
-  Future<ExtractedComic> _extractRar(
-    String archivePath,
-    String outputDir, {
-    required bool isRar5,
-  }) async {
+  Future<ExtractedComic> _extractRar(String archivePath, String outputDir) async {
     final tempDir = await Directory.systemTemp.createTemp('comic_rar_');
     try {
-      // unrar_file is a platform plugin, so it has to run on this isolate;
-      // the native side does the heavy lifting.
+      // package:rar handles RAR4 and RAR5 (libarchive via FFI on Android,
+      // UnrarKit on iOS) and already runs off the UI isolate.
+      bool extracted;
       try {
-        await UnrarFile.extract_rar(archivePath, tempDir.path);
+        final result = await Rar.extractRarFile(
+          rarFilePath: archivePath,
+          destinationPath: tempDir.path,
+        );
+        extracted = result['success'] == true;
       } catch (_) {
+        extracted = false; // e.g. no native implementation on this platform
+      }
+      if (!extracted) {
         throw UnsupportedComicException(
-          isRar5
-              ? 'No se pudo extraer el archivo CBR (formato RAR5 no soportado).'
-              : 'No se pudo extraer el archivo CBR. El archivo puede estar corrupto.',
+          'No se pudo extraer el archivo CBR. El archivo puede estar corrupto '
+          'o protegido con contraseña.',
         );
       }
       final source = tempDir.path;
