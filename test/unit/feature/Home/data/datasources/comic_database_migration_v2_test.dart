@@ -59,10 +59,10 @@ void main() {
     deleteQuietly(dbDir);
   });
 
-  test('upgrades v2 -> v3 adding metadata columns and keeping progress',
+  test('upgrades v2 -> latest adding metadata columns and keeping progress',
       () async {
     final database = await ComicDatabase.instance.database;
-    expect(await database.getVersion(), 3);
+    expect(await database.getVersion(), ComicDatabase.schemaVersion);
 
     final comic = (await ComicDatabase.instance.fetchAllComics()).single;
     expect(comic.title, 'x');

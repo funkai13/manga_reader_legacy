@@ -19,12 +19,12 @@ class ComicController extends AsyncNotifier<List<ComicEntity>> {
     return extension == '.cbz' || extension == '.cbr';
   }
 
-  /// Whether a comic with this file name was already imported: by title, or
-  /// by file name when the user renamed the comic in the app.
-  Future<bool> isAlreadyImported(String fileName) async {
+  /// Whether the file at [filePath] was already imported, compared by
+  /// content: renamed files are still detected and different comics that
+  /// share a file name are not.
+  Future<bool> isAlreadyImported(String filePath) async {
     final comicRepository = ref.read(comicRepositoryProvider);
-    return await comicRepository.getComicByTitle(fileName) != null ||
-        await comicRepository.getComicByFilenameMatch(fileName) != null;
+    return await comicRepository.findDuplicate(filePath) != null;
   }
 
   /// Extracts and stores the comic. The list is refreshed by [finishImport]

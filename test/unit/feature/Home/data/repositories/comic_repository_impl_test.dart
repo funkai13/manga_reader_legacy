@@ -6,11 +6,13 @@ import 'package:image/image.dart' as img;
 import 'package:manga_reader/feature/Home/data/models/comic_model.dart';
 import 'package:manga_reader/feature/Home/data/repositories/comic_repository_impl.dart';
 import 'package:manga_reader/feature/Home/data/services/comic_archive_extractor.dart';
+import 'package:manga_reader/feature/Home/data/services/comic_fingerprint.dart';
 import 'package:manga_reader/feature/Home/data/services/comic_storage.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Home/domain/exceptions/comic_exceptions.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:rar/rar.dart';
+import 'package:sqflite/sqflite.dart' show DatabaseException;
 import 'package:path/path.dart' as p;
 // ignore: depend_on_referenced_packages
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -21,6 +23,17 @@ import '../../../../helpers/db_stubs.dart';
 import '../../../../helpers/fake_path_provider.dart';
 import '../../../../helpers/fake_rar_platform.dart';
 import '../../../../helpers/mocks.dart';
+
+/// A sqflite error as thrown on a UNIQUE violation (or any other error).
+class _FakeDatabaseException extends Fake implements DatabaseException {
+  _FakeDatabaseException({required this.unique});
+
+  final bool unique;
+
+  @override
+  bool isUniqueConstraintError([String? field]) =>
+      unique && field == 'comics.contentHash';
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +59,8 @@ void main() {
     PathProviderPlatform.instance = FakePathProviderPlatform(appDocs.path);
 
     when(() => db.getComicByTitle(any())).thenAnswer((_) async => null);
+    when(() => db.getComicByContentHash(any())).thenAnswer((_) async => null);
+    when(() => db.getComicById(any())).thenAnswer((_) async => null);
     when(() => db.addComic(any())).thenAnswer((_) async => newId);
     when(() => db.deleteComic(any())).thenAnswer((_) async {});
     stubUpdateComic(db);
@@ -85,18 +100,77 @@ void main() {
               id: null, title: p.basename(file.path), filePath: file.path));
 
   group('addComic', () {
-    test('returns the existing comic without inserting when title exists',
+    test('stores the content fingerprint of the source file', () async {
+      final file = buildArchive(sandbox, 'a.cbz', {'1.jpg': fakeJpg});
+      await importFile(file);
+      final hash = await const ComicFingerprint().of(file.path);
+      expect(insertedModel().contentHash, hash);
+      verify(() => db.getComicByContentHash(hash)).called(1);
+    });
+
+    test('same content already imported -> DuplicateComicException',
         () async {
-      when(() => db.getComicByTitle('Dup.cbz')).thenAnswer((_) async =>
-          buildComicModel(id: 5, title: 'Dup.cbz', totalPages: 12, author: 'A'));
+      final file = buildArchive(sandbox, 'Dup.cbz', {'1.jpg': fakeJpg});
+      when(() => db.getComicByContentHash(any()))
+          .thenAnswer((_) async => buildComicModel(id: 5, title: 'Other'));
 
-      final result =
-          await repo.addComic(buildComicEntity(id: null, title: 'Dup.cbz'));
-
-      expect(result.id, 5);
-      expect(result.totalPages, 12);
-      expect(result.author, 'A');
+      await expectLater(
+        importFile(file),
+        throwsA(isA<DuplicateComicException>()
+            .having((e) => e.existingId, 'existingId', 5)),
+      );
       verifyNever(() => db.addComic(any()));
+      expect(leftovers(), isEmpty, reason: 'checked before extracting');
+    });
+
+    test('the same file renamed is still a duplicate', () async {
+      final original = buildArchive(sandbox, 'naruto.cbz', {'1.jpg': fakeJpg});
+      await importFile(original);
+      final storedHash = insertedModel().contentHash!;
+      when(() => db.getComicByContentHash(storedHash))
+          .thenAnswer((_) async => buildComicModel(id: newId));
+
+      final renamed = original.copySync(p.join(sandbox.path, 'renamed.cbr'));
+      await expectLater(
+          importFile(renamed), throwsA(isA<DuplicateComicException>()));
+    });
+
+    test('two different files with the same name both import', () async {
+      final dirA = Directory(p.join(sandbox.path, 'a'))..createSync();
+      final dirB = Directory(p.join(sandbox.path, 'b'))..createSync();
+      final a = buildArchive(dirA, 'vol1.cbz', {'1.jpg': fakeJpg});
+      final b = buildArchive(dirB, 'vol1.cbz', {'1.png': fakePng});
+
+      await importFile(a);
+      await importFile(b);
+
+      final inserted = verify(() => db.addComic(captureAny()))
+          .captured
+          .cast<ComicModel>();
+      expect(inserted, hasLength(2));
+      expect(inserted.map((m) => m.title), ['vol1.cbz', 'vol1.cbz']);
+      expect(inserted[0].contentHash, isNot(inserted[1].contentHash));
+      verifyNever(() => db.getComicByTitle(any()));
+    });
+
+    test('a concurrent import of the same content (UNIQUE) -> duplicate',
+        () async {
+      final file = buildArchive(sandbox, 'race.cbz', {'1.jpg': fakeJpg});
+      when(() => db.addComic(any()))
+          .thenThrow(_FakeDatabaseException(unique: true));
+
+      await expectLater(
+          importFile(file), throwsA(isA<DuplicateComicException>()));
+      expect(leftovers(), isEmpty);
+    });
+
+    test('other DB errors are rethrown as they are', () async {
+      final file = buildArchive(sandbox, 'err.cbz', {'1.jpg': fakeJpg});
+      final error = _FakeDatabaseException(unique: false);
+      when(() => db.addComic(any())).thenThrow(error);
+
+      await expectLater(importFile(file), throwsA(same(error)));
+      expect(leftovers(), isEmpty);
     });
 
     test('extracts first, then inserts once with relative paths', () async {
@@ -465,13 +539,28 @@ void main() {
       expect(await repo.getComicByTitle('missing'), isNull);
     });
 
-    test('getComicByFilenameMatch maps / null', () async {
-      when(() => db.getComicByFilenameMatch('f.cbz'))
-          .thenAnswer((_) async => buildComicModel(id: 6, genre: 'G'));
-      when(() => db.getComicByFilenameMatch('x.cbz'))
-          .thenAnswer((_) async => null);
-      expect((await repo.getComicByFilenameMatch('f.cbz'))!.genre, 'G');
-      expect(await repo.getComicByFilenameMatch('x.cbz'), isNull);
+    test('findDuplicate looks the file up by content hash', () async {
+      final file = buildArchive(sandbox, 'f.cbz', {'1.jpg': fakeJpg});
+      final hash = await const ComicFingerprint().of(file.path);
+      when(() => db.getComicByContentHash(hash)).thenAnswer((_) async =>
+          buildComicModel(id: 6, genre: 'G', imagesPath: 'comics/c_6'));
+
+      final found = await repo.findDuplicate(file.path);
+      expect(found!.id, 6);
+      expect(found.genre, 'G');
+      expect(found.imagesPath, p.join(appDocs.path, 'comics', 'c_6'));
+    });
+
+    test('findDuplicate: unknown content -> null', () async {
+      final file = buildArchive(sandbox, 'new.cbz', {'1.jpg': fakeJpg});
+      expect(await repo.findDuplicate(file.path), isNull);
+      verify(() => db.getComicByContentHash(any())).called(1);
+    });
+
+    test('findDuplicate: unreadable file -> null without querying', () async {
+      expect(await repo.findDuplicate(p.join(sandbox.path, 'ghost.cbz')),
+          isNull);
+      verifyNever(() => db.getComicByContentHash(any()));
     });
 
     test('getAllComics maps every model preserving order', () async {
@@ -527,9 +616,47 @@ void main() {
       expect(call['title'], isNull);
     });
 
-    test('deleteComic delegates', () async {
+    test('deleteComic of an unknown id only deletes the row', () async {
       await repo.deleteComic(3);
       verify(() => db.deleteComic(3)).called(1);
+    });
+
+    test('deleteComic also removes the images folder', () async {
+      final folder = Directory(p.join(appDocs.path, 'comics', 'c_3', 'thumb'))
+        ..createSync(recursive: true);
+      File(p.join(folder.path, 'cover.jpg')).writeAsBytesSync([1]);
+      final keep = Directory(p.join(appDocs.path, 'comics', 'c_4'))
+        ..createSync(recursive: true);
+      when(() => db.getComicById(3)).thenAnswer(
+          (_) async => buildComicModel(id: 3, imagesPath: 'comics/c_3'));
+
+      await repo.deleteComic(3);
+
+      verify(() => db.deleteComic(3)).called(1);
+      expect(leftovers(), ['c_4']);
+      expect(keep.existsSync(), isTrue);
+    });
+
+    test('deleteComic never deletes folders outside comics/', () async {
+      final outside = Directory(p.join(appDocs.path, 'other'))..createSync();
+      when(() => db.getComicById(3)).thenAnswer(
+          (_) async => buildComicModel(id: 3, imagesPath: outside.path));
+
+      await repo.deleteComic(3);
+
+      verify(() => db.deleteComic(3)).called(1);
+      expect(outside.existsSync(), isTrue);
+    });
+
+    test('deleteComic keeps the files when the DB delete fails', () async {
+      final folder = Directory(p.join(appDocs.path, 'comics', 'c_3'))
+        ..createSync(recursive: true);
+      when(() => db.getComicById(3)).thenAnswer(
+          (_) async => buildComicModel(id: 3, imagesPath: 'comics/c_3'));
+      when(() => db.deleteComic(3)).thenThrow(StateError('db down'));
+
+      await expectLater(repo.deleteComic(3), throwsStateError);
+      expect(folder.existsSync(), isTrue);
     });
 
     test('updateComicMetadata forwards only metadata fields', () async {

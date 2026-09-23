@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_reader/feature/Home/data/datasources/comic_database.dart';
 import 'package:manga_reader/feature/Home/data/models/comic_fields.dart';
+import 'package:manga_reader/feature/Home/data/models/comic_model.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -34,17 +35,21 @@ void main() {
     String? collection,
     String picture = '',
     String? comicType,
+    String? contentHash,
   }) {
-    return db.addComic(buildComicModel(
-      id: null,
-      title: title,
-      filePath: filePath,
-      author: author,
-      genre: genre,
-      collection: collection,
-      picture: picture,
-      comicType: comicType,
-    ));
+    return db.addComic(ComicModel.fromMap({
+      ...buildComicModel(
+        id: null,
+        title: title,
+        filePath: filePath,
+        author: author,
+        genre: genre,
+        collection: collection,
+        picture: picture,
+        comicType: comicType,
+      ).toMap(),
+      ComicFields.contentHash: contentHash,
+    }));
   }
 
   group('database setup', () {
@@ -58,11 +63,11 @@ void main() {
       expect(identical(a, b), isTrue);
     });
 
-    test('creates comics.db at version 3 with the full schema', () async {
+    test('creates comics.db at version 4 with the full schema', () async {
       final database = await db.database;
       expect(p.normalize(database.path),
           p.normalize(p.join(dbDir.path, 'comics.db')));
-      expect(await database.getVersion(), 3);
+      expect(await database.getVersion(), 4);
 
       final cols = await database
           .rawQuery('PRAGMA table_info(${ComicFields.tableName})');
@@ -86,7 +91,26 @@ void main() {
         ComicFields.genre,
         ComicFields.collection,
         ComicFields.comicType,
+        ComicFields.contentHash,
       });
+    });
+
+    test('creates the lookup indexes (contentHash unique)', () async {
+      final database = await db.database;
+      final indexes = {
+        for (final row in await database
+            .rawQuery('PRAGMA index_list(${ComicFields.tableName})'))
+          row['name'] as String: row['unique'] as int,
+      };
+      expect(indexes, containsPair('idx_comics_contentHash', 1));
+      for (final column in [
+        ComicFields.author,
+        ComicFields.genre,
+        ComicFields.collection,
+        ComicFields.filePath,
+      ]) {
+        expect(indexes, containsPair('idx_comics_$column', 0));
+      }
     });
   });
 
@@ -101,13 +125,63 @@ void main() {
       expect(id2, greaterThan(id1));
 
       final all = await db.fetchAllComics();
-      expect(all.map((c) => c.title), ['A', 'B']);
-      final a = all.first;
+      expect(all.map((c) => c.title), ['B', 'A']);
+      final a = all.last;
       expect(a.id, id1);
       expect(a.author, 'Oda');
       expect(a.comicType, 'Manga');
       expect(a.isFavorite, isFalse);
       expect(a.rating, isNull);
+    });
+
+    test('fetchAllComics returns newest first (by id), whatever the titles',
+        () async {
+      await insert(title: 'b');
+      await insert(title: 'C');
+      await insert(title: 'a');
+      expect((await db.fetchAllComics()).map((c) => c.title), ['a', 'C', 'b']);
+    });
+
+    test('insert trims title and categories', () async {
+      await insert(
+          title: '  One Piece 1.cbz ',
+          author: ' Oda ',
+          genre: 'Shonen\t',
+          collection: '\nOne Piece');
+      final c = (await db.fetchAllComics()).single;
+      expect(c.title, 'One Piece 1.cbz');
+      expect(c.author, 'Oda');
+      expect(c.genre, 'Shonen');
+      expect(c.collection, 'One Piece');
+    });
+
+    test('contentHash roundtrips; duplicates violate the UNIQUE index',
+        () async {
+      final id = await insert(title: 'A', contentHash: 'abc');
+      expect((await db.getComicByContentHash('abc'))!.id, id);
+      expect((await db.getComicByContentHash('abc'))!.contentHash, 'abc');
+      expect(await db.getComicByContentHash('zzz'), isNull);
+
+      await expectLater(
+        insert(title: 'B', contentHash: 'abc'),
+        throwsA(isA<DatabaseException>().having(
+            (e) => e.isUniqueConstraintError(
+                '${ComicFields.tableName}.${ComicFields.contentHash}'),
+            'unique contentHash',
+            isTrue)),
+      );
+    });
+
+    test('many legacy rows without contentHash are allowed', () async {
+      await insert(title: 'A');
+      await insert(title: 'B');
+      expect(await db.fetchAllComics(), hasLength(2));
+    });
+
+    test('getComicById', () async {
+      final id = await insert(title: 'X');
+      expect((await db.getComicById(id))!.title, 'X');
+      expect(await db.getComicById(id + 100), isNull);
     });
 
     test('ignores provided id=null and generates a new one', () async {
@@ -156,34 +230,6 @@ void main() {
       await insert(title: 'Dup');
       expect((await db.getComicByTitle('Dup'))!.id, id);
     });
-
-    test('getComicByFilenameMatch matches path suffix after "/"', () async {
-      final id = await insert(filePath: '/storage/emulated/0/one.cbz');
-      expect((await db.getComicByFilenameMatch('one.cbz'))!.id, id);
-      expect(await db.getComicByFilenameMatch('ne.cbz'), isNull);
-      expect(await db.getComicByFilenameMatch('two.cbz'), isNull);
-    });
-
-    test(
-      'getComicByFilenameMatch treats "_" and "%" in the filename literally',
-      () async {
-        await insert(filePath: '/c/myXcomic.cbz');
-        expect(await db.getComicByFilenameMatch('my_comic.cbz'), isNull);
-      },
-      skip: 'BUG: getComicByFilenameMatch uses LIKE without escaping, so "_" '
-          'and "%" in file names act as wildcards and produce false '
-          'duplicate matches (e.g. "my_comic.cbz" matches "myXcomic.cbz").',
-    );
-
-    test(
-      'getComicByFilenameMatch matches Windows-style paths',
-      () async {
-        await insert(filePath: r'C:\comics\one.cbz');
-        expect(await db.getComicByFilenameMatch('one.cbz'), isNotNull);
-      },
-      skip: 'BUG: getComicByFilenameMatch only matches "%/<name>"; paths '
-          r'using "\" separators (Windows desktop) are never detected.',
-    );
   });
 
   group('updates', () {
@@ -227,6 +273,22 @@ void main() {
       expect(c.genre, 'G');
       expect(c.collection, 'C');
       expect(c.comicType, 'Manga');
+    });
+
+    test('updateComic trims title and categories, ignores a blank title',
+        () async {
+      final id = await insert(title: 'Old');
+      await db.updateComic(
+          id: id, title: ' New ', author: ' Oda', genre: 'G ', collection: ' C ');
+      var c = (await db.fetchAllComics()).single;
+      expect(c.title, 'New');
+      expect(c.author, 'Oda');
+      expect(c.genre, 'G');
+      expect(c.collection, 'C');
+
+      await db.updateComic(id: id, title: '   ');
+      c = (await db.fetchAllComics()).single;
+      expect(c.title, 'New');
     });
 
     test('updateComic can set booleans back to false', () async {
@@ -319,6 +381,55 @@ void main() {
       await db.updateAuthorName('Miura', 'Oda');
       final rows = await db.getAuthorsWithCount();
       expect(rows.single['count'], 3);
+    });
+
+    test('categories ignore case and surrounding whitespace', () async {
+      await insert(
+          title: 'B', author: 'oda ', genre: ' shonen', collection: 'op');
+      expect(await db.getDistinctValues(ComicFields.author), ['Miura', 'Oda']);
+      expect(
+          await db.getDistinctValues(ComicFields.genre), ['Seinen', 'Shonen']);
+      expect(await db.getDistinctValues(ComicFields.collection), ['OP']);
+
+      final authors = await db.getAuthorsWithCount();
+      expect(authors.map((r) => [r['name'], r['count']]), [
+        ['Miura', 1],
+        ['Oda', 3],
+      ]);
+      expect((await db.getGenresWithCount()).last['count'], 3);
+      expect((await db.getCollectionsWithCount()).single['count'], 3);
+
+      expect((await db.getComicsByAuthor(' ODA')).map((c) => c.title),
+          ['A', 'B', 'Z']);
+      expect(await db.getComicsByGenre('SHONEN '), hasLength(3));
+      expect(await db.getComicsByCollection('Op'), hasLength(3));
+    });
+
+    test('categories are sorted case-insensitively', () async {
+      await insert(title: 'x', author: 'akira');
+      expect(await db.getDistinctValues(ComicFields.author),
+          ['akira', 'Miura', 'Oda']);
+      expect((await db.getAuthorsWithCount()).map((r) => r['name']),
+          ['akira', 'Miura', 'Oda']);
+    });
+
+    test('getDistinctValues only accepts category columns', () async {
+      expect(() => db.getDistinctValues(ComicFields.title),
+          throwsArgumentError);
+    });
+
+    test('rename matches every spelling of the category and trims', () async {
+      await insert(title: 'B', author: 'ODA');
+      await db.updateAuthorName(' oda', ' Eiichiro Oda ');
+      expect(await db.getDistinctValues(ComicFields.author),
+          ['Eiichiro Oda', 'Miura']);
+      expect(await db.getComicsByAuthor('Eiichiro Oda'), hasLength(3));
+
+      await db.updateGenreName('SHONEN', 'Shōnen');
+      await db.updateCollectionName('op', 'One Piece');
+      expect(
+          await db.getDistinctValues(ComicFields.genre), ['Seinen', 'Shōnen']);
+      expect(await db.getDistinctValues(ComicFields.collection), ['One Piece']);
     });
 
     test('getComicsBy* filter and order by title', () async {
