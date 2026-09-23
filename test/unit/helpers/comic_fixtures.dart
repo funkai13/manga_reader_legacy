@@ -1,0 +1,144 @@
+import 'package:manga_reader/feature/Home/data/models/comic_fields.dart';
+import 'package:manga_reader/feature/Home/data/models/comic_model.dart';
+import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
+
+/// Builds a [ComicEntity] with sensible defaults; override what you need.
+ComicEntity buildComicEntity({
+  int? id = 1,
+  String title = 'Comic 1',
+  String filePath = '/comics/comic1.cbz',
+  String picture = '',
+  int currentReadPage = 0,
+  int totalPages = 10,
+  String lastOpened = '2025-01-01T10:00:00.000',
+  int currentReading = 0,
+  String imagesPath = '/images/1',
+  bool isReading = false,
+  bool isFavorite = false,
+  int? rating,
+  String bookMarks = '',
+  bool isCompleted = false,
+  String? author,
+  String? genre,
+  String? collection,
+  String? comicType,
+}) {
+  return ComicEntity(
+    id: id,
+    title: title,
+    filePath: filePath,
+    picture: picture,
+    currentReadPage: currentReadPage,
+    totalPages: totalPages,
+    lastOpened: lastOpened,
+    currentReading: currentReading,
+    imagesPath: imagesPath,
+    isReading: isReading,
+    isFavorite: isFavorite,
+    rating: rating,
+    bookMarks: bookMarks,
+    isCompleted: isCompleted,
+    author: author,
+    genre: genre,
+    collection: collection,
+    comicType: comicType,
+  );
+}
+
+/// Builds a [ComicModel] with sensible defaults; override what you need.
+ComicModel buildComicModel({
+  int? id = 1,
+  String title = 'Comic 1',
+  String filePath = '/comics/comic1.cbz',
+  String picture = '',
+  int currentReadPage = 0,
+  int totalPages = 10,
+  String lastOpened = '2025-01-01T10:00:00.000',
+  int currentReading = 0,
+  String imagesPath = '/images/1',
+  bool isReading = false,
+  bool isFavorite = false,
+  int? rating,
+  String bookMarks = '',
+  bool isCompleted = false,
+  String? author,
+  String? genre,
+  String? collection,
+  String? comicType,
+}) {
+  return ComicModel(
+    id: id,
+    title: title,
+    filePath: filePath,
+    picture: picture,
+    currentReadPage: currentReadPage,
+    totalPages: totalPages,
+    lastOpened: lastOpened,
+    currentReading: currentReading,
+    imagesPath: imagesPath,
+    isReading: isReading,
+    isFavorite: isFavorite,
+    rating: rating,
+    bookMarks: bookMarks,
+    isCompleted: isCompleted,
+    author: author,
+    genre: genre,
+    collection: collection,
+    comicType: comicType,
+  );
+}
+
+/// A raw DB row as sqflite would return it.
+Map<String, dynamic> buildComicRow({
+  Object? id = 1,
+  Object? isFavorite = 0,
+  Object? isReading = 0,
+  Object? isCompleted = 0,
+  Object? rating,
+  Object? picture = 'cover.jpg',
+  Object? lastOpened = '2025-01-01T10:00:00.000',
+  Object? bookMarks = '',
+}) {
+  return <String, dynamic>{
+    ComicFields.id: id,
+    ComicFields.filePath: '/comics/a.cbz',
+    ComicFields.title: 'A',
+    ComicFields.picture: picture,
+    ComicFields.currentPage: 3,
+    ComicFields.totalPages: 20,
+    ComicFields.lastOpened: lastOpened,
+    ComicFields.currentReading: 0,
+    ComicFields.imagesPath: '/images/a',
+    ComicFields.isFavorite: isFavorite,
+    ComicFields.isReading: isReading,
+    ComicFields.rating: rating,
+    ComicFields.bookMarks: bookMarks,
+    ComicFields.isCompleted: isCompleted,
+    ComicFields.author: 'Author',
+    ComicFields.genre: 'Seinen',
+    ComicFields.collection: 'Col',
+    ComicFields.comicType: 'Manga',
+  };
+}
+
+/// Flattens every field of a comic (ComicEntity has no == override).
+Map<String, Object?> comicFields(ComicEntity c) => {
+      'id': c.id,
+      'filePath': c.filePath,
+      'title': c.title,
+      'picture': c.picture,
+      'currentReadPage': c.currentReadPage,
+      'totalPages': c.totalPages,
+      'lastOpened': c.lastOpened,
+      'currentReading': c.currentReading,
+      'imagesPath': c.imagesPath,
+      'isReading': c.isReading,
+      'isFavorite': c.isFavorite,
+      'rating': c.rating,
+      'bookMarks': c.bookMarks,
+      'isCompleted': c.isCompleted,
+      'author': c.author,
+      'genre': c.genre,
+      'collection': c.collection,
+      'comicType': c.comicType,
+    };
