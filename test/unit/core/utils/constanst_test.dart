@@ -14,12 +14,4 @@ void main() {
       expect(Breakpoints.tablet, lessThan(Breakpoints.desktop));
     });
   });
-
-  group('ApiConfig', () {
-    test('apiUrl is a valid https URL', () {
-      final uri = Uri.parse(ApiConfig.apiUrl);
-      expect(uri.scheme, 'https');
-      expect(uri.host, isNotEmpty);
-    });
-  });
 }

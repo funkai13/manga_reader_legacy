@@ -62,7 +62,7 @@ class AppTheme {
       ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: AppColorsLight.accentColor,
-        selectionColor: AppColorsLight.accentColor.withOpacity(0.3),
+        selectionColor: AppColorsLight.accentColor.withValues(alpha: 0.3),
         selectionHandleColor: AppColorsLight.accentColor,
       ),
     );
@@ -125,7 +125,7 @@ class AppTheme {
       ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: AppColorsDark.accentColor,
-        selectionColor: AppColorsDark.accentColor.withOpacity(0.3),
+        selectionColor: AppColorsDark.accentColor.withValues(alpha: 0.3),
         selectionHandleColor: AppColorsDark.accentColor,
       ),
     );
