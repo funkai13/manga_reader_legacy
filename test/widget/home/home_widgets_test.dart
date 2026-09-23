@@ -42,26 +42,31 @@ void main() {
       expect(taps, 1);
     });
 
-    // testWidgets only accepts a bool `skip`, so the reason lives on a group.
-    group(
-      'dispose',
-      () {
-        testWidgets(
-          'does not call setState after being disposed before the intro delay',
-          (tester) async {
-            await pumpApp(tester, EmptyComicsScreen(onAddComic: () {}));
-            // Remove the screen before the 100ms Future.delayed fires.
-            await tester.pumpWidget(const SizedBox());
-            await tester.pump(const Duration(milliseconds: 200));
-            expect(tester.takeException(), isNull);
-          },
-        );
+    testWidgets(
+      'does not call setState after being disposed before the intro delay',
+      (tester) async {
+        await pumpApp(tester, EmptyComicsScreen(onAddComic: () {}));
+        // Remove the screen before the 100ms Future.delayed fires.
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(tester.takeException(), isNull);
       },
-      skip: 'BUG: EmptyComicsScreen.initState usa Future.delayed(100ms) y '
-          'llama setState sin comprobar `mounted`; si la pantalla se '
-          'desmonta antes (p.ej. los comics cargan rápido) lanza '
-          '"setState() called after dispose()".',
     );
+
+    testWidgets('icon and subtitle use readable colors in dark mode',
+        (tester) async {
+      await pumpApp(tester, EmptyComicsScreen(onAddComic: () {}),
+          themeMode: ThemeMode.dark);
+      await tester.pump(const Duration(milliseconds: 150));
+      await tester.pumpAndSettle();
+
+      final subtitle = tester
+          .widget<Text>(find.text('Agrega tu primer comic para comenzar.'));
+      expect(subtitle.style?.color, isNot(Colors.black54));
+      expect(subtitle.style!.color!.computeLuminance(), greaterThan(0.1));
+      final icon = tester.widget<Icon>(find.byIcon(Icons.menu_book_rounded));
+      expect(icon.color!.computeLuminance(), greaterThan(0.1));
+    });
   });
 
   group('ComicsCarousel', () {
@@ -185,6 +190,22 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(() => repo.getAllComics()).called(1);
+    });
+
+    testWidgets('renders completed/reading comics on tablet without overflow',
+        (tester) async {
+      await pumpApp(
+        tester,
+        const ComicsGrid(),
+        size: kTabletSize,
+        wrapInScaffold: true,
+        overrides: testOverrides(
+            comicRepository: createComicRepository(comics: sampleComics())),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Completado'), findsOneWidget);
+      expect(find.text('Pág. 5'), findsOneWidget);
     });
   });
 }

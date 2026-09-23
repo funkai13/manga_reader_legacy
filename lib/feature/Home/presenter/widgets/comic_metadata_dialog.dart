@@ -12,7 +12,8 @@ class ComicMetadataDialog extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ComicMetadataDialog> createState() => _ComicMetadataDialogState();
+  ConsumerState<ComicMetadataDialog> createState() =>
+      _ComicMetadataDialogState();
 }
 
 class _ComicMetadataDialogState extends ConsumerState<ComicMetadataDialog> {
@@ -42,6 +43,7 @@ class _ComicMetadataDialogState extends ConsumerState<ComicMetadataDialog> {
   @override
   Widget build(BuildContext context) {
     final controller = ref.read(comicControllerProvider.notifier);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
@@ -90,6 +92,7 @@ class _ComicMetadataDialogState extends ConsumerState<ComicMetadataDialog> {
                 const SizedBox(height: 16),
                 CustomAutocompleteField(
                   label: 'Autor',
+                  isDark: isDark,
                   controller: _authorController,
                   icon: Icons.person,
                   optionsBuilder: () => controller.getSuggestions('author'),
@@ -98,6 +101,7 @@ class _ComicMetadataDialogState extends ConsumerState<ComicMetadataDialog> {
                 const SizedBox(height: 16),
                 CustomAutocompleteField(
                   label: 'Género',
+                  isDark: isDark,
                   controller: _genreController,
                   icon: Icons.category,
                   optionsBuilder: () => controller.getSuggestions('genre'),
@@ -106,6 +110,7 @@ class _ComicMetadataDialogState extends ConsumerState<ComicMetadataDialog> {
                 const SizedBox(height: 16),
                 CustomAutocompleteField(
                   label: 'Colección',
+                  isDark: isDark,
                   controller: _collectionController,
                   icon: Icons.collections_bookmark,
                   optionsBuilder: () => controller.getSuggestions('collection'),

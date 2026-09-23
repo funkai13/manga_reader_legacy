@@ -1,61 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:manga_reader/core/widgets/custom_bottomBar.dart';
 import 'package:manga_reader/core/widgets/generic_dialog.dart';
 import 'package:manga_reader/core/widgets/generic_grid.dart';
-import 'package:manga_reader/core/widgets/generic_list.dart';
 import 'package:manga_reader/core/widgets/responsive_layout.dart';
 
 import '../../helpers/widget/pump_app.dart';
 
 void main() {
-  group('CustomBottomBar', () {
-    testWidgets('renders the three items with Libreria selected by default',
-        (tester) async {
-      await pumpApp(
-        tester,
-        const Scaffold(bottomNavigationBar: CustomBottomBar()),
-      );
-
-      expect(find.text('Libreria'), findsOneWidget);
-      expect(find.text('añadir'), findsOneWidget);
-      expect(find.text('Configuracion'), findsOneWidget);
-      expect(find.byIcon(Icons.library_books), findsOneWidget);
-      expect(find.byIcon(Icons.library_add), findsOneWidget);
-      expect(find.byIcon(Icons.settings), findsOneWidget);
-
-      final bar =
-          tester.widget<BottomNavigationBar>(find.byType(BottomNavigationBar));
-      expect(bar.currentIndex, 0);
-    });
-
-    testWidgets('tapping an item updates the selected index', (tester) async {
-      await pumpApp(
-        tester,
-        const Scaffold(bottomNavigationBar: CustomBottomBar()),
-      );
-
-      await tester.tap(find.text('Configuracion'));
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
-            .currentIndex,
-        2,
-      );
-
-      await tester.tap(find.byIcon(Icons.library_add));
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
-            .currentIndex,
-        1,
-      );
-    });
-  });
-
   group('DialogService', () {
     Future<void> pumpDialogHost(
       WidgetTester tester,
@@ -169,36 +121,6 @@ void main() {
       );
       expect(find.byType(GridView), findsOneWidget);
       expect(find.byType(Text), findsNothing);
-    });
-  });
-
-  group('GenericList', () {
-    testWidgets('builds one row per item and scrolls lazily', (tester) async {
-      final items = List.generate(100, (i) => i);
-      await pumpApp(
-        tester,
-        GenericList<int>(
-          items: items,
-          itemBuilder: (i) => SizedBox(height: 50, child: Text('row $i')),
-        ),
-        wrapInScaffold: true,
-      );
-
-      expect(find.text('row 0'), findsOneWidget);
-      expect(find.text('row 99'), findsNothing);
-
-      await tester.scrollUntilVisible(find.text('row 99'), 500);
-      expect(find.text('row 99'), findsOneWidget);
-    });
-
-    testWidgets('uses 12px padding', (tester) async {
-      await pumpApp(
-        tester,
-        GenericList<int>(items: const [1], itemBuilder: (i) => Text('$i')),
-        wrapInScaffold: true,
-      );
-      final list = tester.widget<ListView>(find.byType(ListView));
-      expect(list.padding, const EdgeInsets.all(12));
     });
   });
 

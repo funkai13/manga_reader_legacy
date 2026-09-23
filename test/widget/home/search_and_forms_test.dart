@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:manga_reader/core/theme/colors.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Reader/presenter/screens/comic_viewer_screen.dart';
 import 'package:manga_reader/feature/Home/presenter/widgets/comic_metadata_dialog.dart';
@@ -125,6 +126,34 @@ void main() {
       expect(find.byType(ComicViewerScreen), findsOneWidget);
       expect(viewer.loadCalls.single.$2, 3);
     });
+
+    for (final isTablet in [false, true]) {
+      testWidgets('hint text is not clipped (${isTablet ? 'tablet' : 'phone'})',
+          (tester) async {
+        await pumpApp(
+          tester,
+          Scaffold(
+            body: Builder(
+              builder: (context) => CustomScrollView(slivers: [
+                buildSearchBar(
+                    context,
+                    sampleComics(),
+                    false,
+                    isTablet ? 0.8 : 1.0,
+                    SearchController(),
+                    FocusNode(),
+                    isTablet),
+              ]),
+            ),
+          ),
+          size: isTablet ? kTabletSize : kPhoneSize,
+        );
+        final field = tester.getRect(find.byType(TextField));
+        final hint = tester.getRect(find.text('Buscar en tu biblioteca'));
+        expect(hint.top, greaterThanOrEqualTo(field.top));
+        expect(hint.bottom, lessThanOrEqualTo(field.bottom));
+      });
+    }
   });
 
   group('CustomAutocompleteField', () {
@@ -214,6 +243,24 @@ void main() {
   });
 
   group('ComicMetadataDialog', () {
+    testWidgets('autocomplete fields use the dark fill color in dark mode',
+        (tester) async {
+      await pumpApp(
+        tester,
+        const Scaffold(body: ComicMetadataDialog(fileName: 'a.cbz')),
+        themeMode: ThemeMode.dark,
+        overrides: testOverrides(),
+      );
+      for (final label in ['Autor', 'Género', 'Colección']) {
+        final decorator = tester.widget<InputDecorator>(find
+            .ancestor(
+                of: find.text(label), matching: find.byType(InputDecorator))
+            .first);
+        expect(decorator.decoration.fillColor, AppColorsDark.cardColor,
+            reason: label);
+      }
+    });
+
     Future<List<Map<String, String>?>> pumpDialog(
       WidgetTester tester, {
       String fileName = 'naruto_01.cbz',
