@@ -16,6 +16,8 @@ SliverToBoxAdapter buildSearchBar(
   FocusNode searchFocusNode,
   bool isTablet,
 ) {
+  // Minimum height only: the bar may grow with the text scale so the hint is
+  // never clipped (a fixed 50px bar cut "Buscar en tu biblioteca" on phones).
   final double kSearchBarBaseHeight = isTablet ? 100.0 : 50.0;
   final barHeight = kSearchBarBaseHeight * scale;
 
@@ -56,15 +58,9 @@ SliverToBoxAdapter buildSearchBar(
               autoFocus: false,
               controller: controller,
               padding: WidgetStatePropertyAll(
-                EdgeInsets.symmetric(
-                  horizontal: 16.w * scale,
-                  vertical: 8.h * scale,
-                ),
+                EdgeInsets.symmetric(horizontal: 16.w * scale),
               ),
-              constraints: BoxConstraints(
-                minHeight: barHeight,
-                maxHeight: barHeight,
-              ),
+              constraints: BoxConstraints(minHeight: barHeight),
               onTap: controller.openView,
               onChanged: (_) => controller.openView(),
               onTapOutside: (_) {

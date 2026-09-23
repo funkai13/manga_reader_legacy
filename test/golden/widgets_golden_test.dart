@@ -71,36 +71,24 @@ void main() {
         await expectGolden(find.byType(Scaffold), variant.file('comic_card'));
       });
 
-      group(
-        'comics_grid',
-        () {
-          testWidgets('comics_grid with data', (tester) async {
-            await covers.precache(tester);
-            final comics = sampleComics(picture: covers.pathFor) +
-                [
-                  buildComic(
-                      id: 5, title: 'Dragon Ball', picture: covers.pathFor(5)),
-                  buildComic(id: 6, title: 'Watchmen'),
-                ];
-            await pumpGolden(
-              tester,
-              const ComicsGrid(),
-              variant,
-              wrapInScaffold: true,
-              overrides: testOverrides(
-                  comicRepository: createComicRepository(comics: comics)),
-            );
-            await expectGolden(
-                find.byType(Scaffold), variant.file('comics_grid'));
-          });
-        },
-        skip: variant.isTablet
-            ? 'BUG: ComicCard desborda (RenderFlex overflow en la fila del '
-                'chip de estado) cuando ComicsGrid (maxCrossAxisExtent 200, '
-                'scale 1.0) se usa en tablet: el chip no es Flexible y su '
-                'tamaño escala con .sp/.w.'
-            : null,
-      );
+      testWidgets('comics_grid with data', (tester) async {
+        await covers.precache(tester);
+        final comics = sampleComics(picture: covers.pathFor) +
+            [
+              buildComic(
+                  id: 5, title: 'Dragon Ball', picture: covers.pathFor(5)),
+              buildComic(id: 6, title: 'Watchmen'),
+            ];
+        await pumpGolden(
+          tester,
+          const ComicsGrid(),
+          variant,
+          wrapInScaffold: true,
+          overrides: testOverrides(
+              comicRepository: createComicRepository(comics: comics)),
+        );
+        await expectGolden(find.byType(Scaffold), variant.file('comics_grid'));
+      });
 
       testWidgets('empty comics screen', (tester) async {
         await pumpGolden(tester, EmptyComicsScreen(onAddComic: () {}), variant);

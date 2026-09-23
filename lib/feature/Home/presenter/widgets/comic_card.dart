@@ -68,24 +68,7 @@ class ComicCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildStatusChip(isDark),
-                      if (comic.currentReadPage > 0 && !comic.isCompleted)
-                        Flexible(
-                          child: Text(
-                            'Pág. ${comic.currentReadPage + 1}',
-                            style: TextStyle(
-                              fontSize: 11.sp,
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                  ),
+                  child: _buildBottomRow(isDark),
                 ),
               ),
               if (onEdit != null)
@@ -130,7 +113,53 @@ class ComicCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip(bool isDark) {
+  /// Status chip on the left, "Pág. N" on the right. Both sides are
+  /// Flexible and scale down instead of overflowing when the card is narrow
+  /// (e.g. ComicsGrid on tablets, where .sp grows faster than the cell).
+  Widget _buildBottomRow(bool isDark) {
+    final chip = _buildStatusChip(isDark);
+    final showPage = comic.currentReadPage > 0 && !comic.isCompleted;
+
+    return Row(
+      mainAxisAlignment:
+          chip == null ? MainAxisAlignment.end : MainAxisAlignment.spaceBetween,
+      children: [
+        if (chip != null)
+          Flexible(
+            // The chip gets the larger share; the page label takes the rest.
+            flex: 3,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: chip,
+            ),
+          ),
+        if (showPage)
+          Flexible(
+            flex: 2,
+            child: Padding(
+              padding: EdgeInsets.only(left: 6.w * scale),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Pág. ${comic.currentReadPage + 1}',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: TextStyle(
+                    fontSize: 10.sp * scale,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget? _buildStatusChip(bool isDark) {
     String? label;
     Color? color;
 
@@ -145,9 +174,7 @@ class ComicCard extends StatelessWidget {
       color = Colors.blueAccent.shade400;
     }
 
-    if (label == null || color == null) {
-      return const SizedBox.shrink();
-    }
+    if (label == null || color == null) return null;
 
     if (isDark) {
       color = color.withValues(alpha: 0.9);
@@ -164,6 +191,8 @@ class ComicCard extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        softWrap: false,
         style: TextStyle(
           fontSize: 10.sp * scale,
           color: Colors.white,
