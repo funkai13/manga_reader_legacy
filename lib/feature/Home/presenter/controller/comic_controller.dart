@@ -197,7 +197,7 @@ class ComicController extends AsyncNotifier<List<ComicEntity>> {
   Future<String> createBookmark(int id, int bookMark, ComicEntity comic) async {
     final comicRepository = ref.read(comicRepositoryProvider);
     try {
-      comicRepository.addBookMark(id, bookMark);
+      await comicRepository.addBookMark(id, bookMark);
       state = state.whenData((comics) {
         return comics.map((c) {
           if (c.id == id) {
@@ -208,8 +208,8 @@ class ComicController extends AsyncNotifier<List<ComicEntity>> {
       });
 
       return 'Update success';
-    } catch (error) {
-      state = AsyncError(error, StackTrace.current);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
       rethrow;
     }
   }

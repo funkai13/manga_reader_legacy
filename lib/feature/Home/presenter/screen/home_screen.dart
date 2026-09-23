@@ -18,6 +18,16 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final _searchController = SearchController();
+  final _searchFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncComics = ref.watch(comicControllerProvider);
@@ -28,8 +38,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final size = MediaQuery.of(context).size;
     final isTablet = size.shortestSide >= 600;
     final scale = isTablet ? 0.8 : 1.0;
-    final searchController = SearchController();
-    final searchFocusNode = FocusNode();
     return Scaffold(
       backgroundColor: isDark
           ? AppColorsDark.backgroundColor
@@ -64,8 +72,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               physics: const BouncingScrollPhysics(),
               slivers: [
                 _buildHomeAppBar(context, isDark, scale, isTablet),
-                buildSearchBar(context, comics, isDark, scale, searchController,
-                    searchFocusNode, isTablet),
+                buildSearchBar(context, comics, isDark, scale, _searchController,
+                    _searchFocusNode, isTablet),
                 SliverToBoxAdapter(
                   child: SizedBox(height: 24.h * scale),
                 ),

@@ -60,11 +60,12 @@ void main() {
     expect(segmented.selected, {'Comic'});
   });
 
-  testWidgets('defaults to Manga when the comic has no type', (tester) async {
+  testWidgets('selects no type when the comic has none (auto)',
+      (tester) async {
     await pumpEdit(tester, buildComic());
     final segmented = tester
         .widget<SegmentedButton<String>>(find.byType(SegmentedButton<String>));
-    expect(segmented.selected, {'Manga'});
+    expect(segmented.selected, isEmpty);
   });
 
   testWidgets('shows the book placeholder when there is no cover',
@@ -99,6 +100,25 @@ void main() {
           comicType: any(named: 'comicType'),
         ));
     expect(find.byType(EditComicScreen), findsOneWidget);
+  });
+
+  testWidgets('editing only the author keeps an auto (null) reading mode',
+      (tester) async {
+    final repo = await pumpEdit(tester, buildComic(id: 3, title: 'Old'));
+
+    await tester.enterText(field('Autor'), 'Otomo');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.save));
+    await tester.pumpAndSettle();
+
+    verify(() => repo.updateComicMetadata(
+          id: 3,
+          title: 'Old',
+          author: 'Otomo',
+          genre: null,
+          collection: null,
+          comicType: null,
+        )).called(1);
   });
 
   testWidgets('saving updates metadata, pops and shows a confirmation',

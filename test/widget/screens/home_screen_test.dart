@@ -230,7 +230,7 @@ void main() {
             author: 'Kishimoto',
             genre: '',
             collection: '',
-            comicType: 'Manga',
+            comicType: null,
           )).called(1);
       // Initial load + refresh after adding.
       verify(() => repo.getAllComics()).called(2);

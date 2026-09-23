@@ -108,10 +108,6 @@ void main() {
             notifier().createBookmark(1, 7, comics.first), throwsException);
         expect(state().hasError, isTrue);
       },
-      skip: 'BUG: createBookmark does not await repository.addBookMark, so '
-          'persistence errors escape the try/catch as unhandled async errors; '
-          'it always returns "Update success" and optimistically updates '
-          'state even if the DB write fails.',
     );
   });
 

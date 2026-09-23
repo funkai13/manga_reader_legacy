@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:manga_reader/core/theme/colors.dart';
 
-class CustomAutocompleteField extends StatelessWidget {
+class CustomAutocompleteField extends StatefulWidget {
   final String label;
   final Future<List<String>> Function() optionsBuilder;
   final void Function(String) onSelected;
@@ -22,37 +22,56 @@ class CustomAutocompleteField extends StatelessWidget {
   });
 
   @override
+  State<CustomAutocompleteField> createState() =>
+      _CustomAutocompleteFieldState();
+}
+
+class _CustomAutocompleteFieldState extends State<CustomAutocompleteField> {
+  final _focusNode = FocusNode();
+
+  // Suggestions come from the DB; load them once instead of on every keystroke.
+  late Future<List<String>> _options = widget.optionsBuilder();
+
+  @override
+  void didUpdateWidget(covariant CustomAutocompleteField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.optionsBuilder != widget.optionsBuilder) {
+      _options = widget.optionsBuilder();
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final scale = widget.scale;
+    final isDark = widget.isDark;
+    final icon = widget.icon;
     return LayoutBuilder(builder: (context, constraints) {
-      return Autocomplete<String>(
+      // The external controller is used directly, so there is nothing to sync.
+      return RawAutocomplete<String>(
+        textEditingController: widget.controller,
+        focusNode: _focusNode,
         optionsBuilder: (TextEditingValue textEditingValue) async {
-          final options = await optionsBuilder();
-          if (textEditingValue.text == '') {
+          final query = textEditingValue.text.toLowerCase();
+          if (query.isEmpty) {
             return const Iterable<String>.empty();
           }
-          return options.where((String option) {
-            return option
-                .toLowerCase()
-                .contains(textEditingValue.text.toLowerCase());
-          });
+          final options = await _options;
+          return options
+              .where((String option) => option.toLowerCase().contains(query));
         },
-        onSelected: onSelected,
+        onSelected: widget.onSelected,
         fieldViewBuilder: (
           BuildContext context,
           TextEditingController fieldTextEditingController,
           FocusNode fieldFocusNode,
           VoidCallback onFieldSubmitted,
         ) {
-          // Sync the internal controller with the external one
-          if (fieldTextEditingController.text != controller.text) {
-            fieldTextEditingController.text = controller.text;
-          }
-          
-          // Listen to changes to update the external controller
-          fieldTextEditingController.addListener(() {
-             controller.text = fieldTextEditingController.text;
-          });
-
           return TextFormField(
             controller: fieldTextEditingController,
             focusNode: fieldFocusNode,
@@ -61,7 +80,7 @@ class CustomAutocompleteField extends StatelessWidget {
               color: isDark ? AppColorsDark.textColor : AppColorsLight.textColor,
             ),
             decoration: InputDecoration(
-              labelText: label,
+              labelText: widget.label,
               prefixIcon: icon != null
                   ? Icon(
                       icon,

@@ -67,9 +67,6 @@ void main() {
         ]);
         expect(c.read(lastAddedComicsProvider).first.id, 2);
       },
-      skip: 'BUG: lastAddedComicsProvider calls DateTime.parse on lastOpened; '
-          'ComicModel.fromMap defaults a NULL lastOpened to "", which makes '
-          'the provider throw FormatException and breaks the home screen.',
     );
   });
 

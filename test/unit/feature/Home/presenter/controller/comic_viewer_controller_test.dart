@@ -75,8 +75,8 @@ void main() {
   });
 
   test('loadComic returns pages sorted by file name', () async {
-    // NOTE: loadComic relies on Directory.listSync order, which is not
-    // guaranteed (NTFS happens to be alphabetical, ext4 on Android is not).
+    // Directory listing order is not guaranteed (NTFS happens to be
+    // alphabetical, ext4/F2FS on Android is not), so loadComic must sort.
     for (final n in ['0003.jpg', '0001.jpg', '0010.jpg', '0002.jpg']) {
       touch(n);
     }
@@ -87,10 +87,7 @@ void main() {
         .map((f) => p.basename(f.path))
         .toList();
     expect(names, ['0001.jpg', '0002.jpg', '0003.jpg', '0010.jpg']);
-  }, skip: Platform.isWindows || Platform.isMacOS
-      ? false
-      : 'BUG: loadComic does not sort files; listSync order is unspecified '
-          'on this filesystem.');
+  });
 
   test('empty folder -> AsyncData([])', () async {
     await viewer().loadComic(images.path, 1);

@@ -21,7 +21,8 @@ class _ComicMetadataDialogState extends ConsumerState<ComicMetadataDialog> {
   final _authorController = TextEditingController();
   final _genreController = TextEditingController();
   final _collectionController = TextEditingController();
-  String _selectedType = 'Manga';
+  // null = auto; don't guess the reading direction for the user.
+  String? _selectedType;
 
   @override
   void initState() {
@@ -129,10 +130,11 @@ class _ComicMetadataDialogState extends ConsumerState<ComicMetadataDialog> {
                       icon: Icon(Icons.menu_book),
                     ),
                   ],
-                  selected: {_selectedType},
+                  selected: {if (_selectedType != null) _selectedType!},
+                  emptySelectionAllowed: true,
                   onSelectionChanged: (Set<String> newSelection) {
                     setState(() {
-                      _selectedType = newSelection.first;
+                      _selectedType = newSelection.firstOrNull;
                     });
                   },
                   style: ButtonStyle(
@@ -161,7 +163,8 @@ class _ComicMetadataDialogState extends ConsumerState<ComicMetadataDialog> {
                             'author': _authorController.text.trim(),
                             'genre': _genreController.text.trim(),
                             'collection': _collectionController.text.trim(),
-                            'comicType': _selectedType,
+                            if (_selectedType != null)
+                              'comicType': _selectedType!,
                           });
                         }
                       },

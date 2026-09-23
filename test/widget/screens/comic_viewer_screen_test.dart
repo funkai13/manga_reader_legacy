@@ -53,12 +53,17 @@ void main() {
     return opacity.opacity == 1;
   }
 
+  // Bookmarks are saved after an 800 ms debounce.
+  Future<void> flushBookmark(WidgetTester tester) =>
+      tester.pump(const Duration(seconds: 1));
+
   Future<void> tapZone(WidgetTester tester, double fraction) async {
     final size = tester.getSize(find.byType(ComicViewerScreen));
     await tester.tapAt(Offset(size.width * fraction, size.height / 2));
     // Wait for the inner double-tap recognizer to give up.
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pumpAndSettle();
+    await flushBookmark(tester);
   }
 
   group('ComicViewerScreen loading', () {
@@ -125,6 +130,13 @@ void main() {
       );
 
       verify(() => repo.startReadingComic(5)).called(1);
+      // The real controller lists the directory with async I/O.
+      for (var i = 0; i < 10 && find.byType(PageView).evaluate().isEmpty; i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
       await tapZone(tester, 0.5);
       expect(find.text('3 Páginas'), findsOneWidget);
     });
@@ -168,9 +180,42 @@ void main() {
       verify(() => repo.addBookMark(7, 0)).called(1);
     });
 
+    testWidgets('manga mode: left zone goes forward, right zone goes back',
+        (tester) async {
+      final (repo, _) = await pumpViewer(tester,
+          comic: buildComic(id: 7, comicType: 'Manga'));
+      await tapZone(tester, 0.1);
+      await tapZone(tester, 0.1);
+      verify(() => repo.addBookMark(7, 1)).called(1);
+      verify(() => repo.addBookMark(7, 2)).called(1);
+
+      await tapZone(tester, 0.9);
+      verify(() => repo.addBookMark(7, 1)).called(1);
+      await tapZone(tester, 0.5);
+      expect(find.text('Página 2'), findsOneWidget);
+    });
+
+    testWidgets('fast page turns save only the last page (debounce)',
+        (tester) async {
+      final (repo, _) = await pumpViewer(tester);
+      final size = tester.getSize(find.byType(ComicViewerScreen));
+      for (var i = 0; i < 3; i++) {
+        await tester.tapAt(Offset(size.width * 0.9, size.height / 2));
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+      }
+      verifyNever(() => repo.addBookMark(any(), any()));
+
+      await flushBookmark(tester);
+      verify(() => repo.addBookMark(7, 3)).called(1);
+      verifyNever(() => repo.addBookMark(7, 1));
+      verifyNever(() => repo.addBookMark(7, 2));
+    });
+
     testWidgets('right zone does nothing on the last page', (tester) async {
       final (repo, _) = await pumpViewer(tester,
           comic: buildComic(id: 7, currentReadPage: 4));
+      await flushBookmark(tester);
       clearInteractions(repo);
       await tapZone(tester, 0.9);
       verifyNever(() => repo.addBookMark(any(), any()));
@@ -272,6 +317,7 @@ void main() {
       await tester.tap(find.descendant(
           of: find.byType(ComicPageGridDialog), matching: find.text('4')));
       await tester.pumpAndSettle();
+      await flushBookmark(tester);
 
       expect(find.byType(ComicPageGridDialog), findsNothing);
       expect(find.text('Página 4'), findsOneWidget);
@@ -293,6 +339,7 @@ void main() {
       final bar = tester.getRect(find.byType(LinearProgressIndicator));
       await tester.tapAt(Offset(bar.left + bar.width * 0.9, bar.center.dy));
       await tester.pumpAndSettle();
+      await flushBookmark(tester);
 
       verify(() => repo.addBookMark(7, 4)).called(1);
     });

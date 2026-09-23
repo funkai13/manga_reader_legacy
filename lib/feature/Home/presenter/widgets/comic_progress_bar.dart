@@ -86,14 +86,17 @@ class _ComicProgressBarState extends State<ComicProgressBar> {
               setState(() {
                 _draggingPageIndex = page;
               });
+              // Only preview while dragging; jumping on every update turns
+              // one drag into dozens of page changes and bookmark writes.
               widget.onPreviewPageChanged(page);
-              widget.onPageSelected(page);
             },
             onHorizontalDragEnd: (_) {
+              final page = _draggingPageIndex;
               setState(() {
                 _draggingPageIndex = null;
               });
               widget.onPreviewPageChanged(null);
+              if (page != null) widget.onPageSelected(page);
             },
             onHorizontalDragCancel: () {
               setState(() {

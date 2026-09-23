@@ -294,7 +294,7 @@ class ComicDatabase {
     final maps = await db.query(
       ComicFields.tableName,
       columns: ['DISTINCT $column'],
-      where: '$column IS NOT NULL AND $column != ""',
+      where: "$column IS NOT NULL AND $column != ''",
       orderBy: column,
     );
     return maps.map((e) => e[column] as String).toList();
@@ -333,9 +333,9 @@ class ComicDatabase {
   Future<List<Map<String, dynamic>>> getAuthorsWithCount() async {
     final db = await database;
     return await db.rawQuery('''
-      SELECT ${ComicFields.author} as name, COUNT(*) as count, MIN(${ComicFields.picture}) as coverPath
+      SELECT ${ComicFields.author} as name, COUNT(*) as count, MIN(NULLIF(${ComicFields.picture}, '')) as coverPath
       FROM ${ComicFields.tableName}
-      WHERE ${ComicFields.author} IS NOT NULL AND ${ComicFields.author} != ""
+      WHERE ${ComicFields.author} IS NOT NULL AND ${ComicFields.author} != ''
       GROUP BY ${ComicFields.author}
       ORDER BY ${ComicFields.author} ASC
     ''');
@@ -344,9 +344,9 @@ class ComicDatabase {
   Future<List<Map<String, dynamic>>> getGenresWithCount() async {
     final db = await database;
     return await db.rawQuery('''
-      SELECT ${ComicFields.genre} as name, COUNT(*) as count, MIN(${ComicFields.picture}) as coverPath
+      SELECT ${ComicFields.genre} as name, COUNT(*) as count, MIN(NULLIF(${ComicFields.picture}, '')) as coverPath
       FROM ${ComicFields.tableName}
-      WHERE ${ComicFields.genre} IS NOT NULL AND ${ComicFields.genre} != ""
+      WHERE ${ComicFields.genre} IS NOT NULL AND ${ComicFields.genre} != ''
       GROUP BY ${ComicFields.genre}
       ORDER BY ${ComicFields.genre} ASC
     ''');
@@ -355,9 +355,9 @@ class ComicDatabase {
   Future<List<Map<String, dynamic>>> getCollectionsWithCount() async {
     final db = await database;
     return await db.rawQuery('''
-      SELECT ${ComicFields.collection} as name, COUNT(*) as count, MIN(${ComicFields.picture}) as coverPath
+      SELECT ${ComicFields.collection} as name, COUNT(*) as count, MIN(NULLIF(${ComicFields.picture}, '')) as coverPath
       FROM ${ComicFields.tableName}
-      WHERE ${ComicFields.collection} IS NOT NULL AND ${ComicFields.collection} != ""
+      WHERE ${ComicFields.collection} IS NOT NULL AND ${ComicFields.collection} != ''
       GROUP BY ${ComicFields.collection}
       ORDER BY ${ComicFields.collection} ASC
     ''');

@@ -31,7 +31,11 @@ class _ComicViewerScreenState extends ConsumerState<ComicViewerScreen> {
   bool _showControls = false;
   bool _mangaMode = false;
   Timer? _longPressTimer;
+  Timer? _persistDebounce;
+  int? _pendingBookmark;
   bool _isLongPressing = false;
+
+  static const _persistDelay = Duration(milliseconds: 800);
 
   @override
   void initState() {
@@ -71,7 +75,7 @@ class _ComicViewerScreenState extends ConsumerState<ComicViewerScreen> {
   void _startLongPress() {
     _longPressTimer?.cancel();
     _longPressTimer = Timer(const Duration(milliseconds: 300), () async {
-      final hasVibrator = (await Vibration.hasVibrator()) ?? false;
+      final hasVibrator = await Vibration.hasVibrator();
       if (hasVibrator) {
         Vibration.vibrate(duration: 50);
       }
@@ -96,16 +100,40 @@ class _ComicViewerScreenState extends ConsumerState<ComicViewerScreen> {
 
   void _toggleMangaMode() {
     setState(() => _mangaMode = !_mangaMode);
-    ref.read(comicControllerProvider.notifier).updateComicMetadata(
+    ref
+        .read(comicControllerProvider.notifier)
+        .updateComicMetadata(
           id: widget.comic.id!,
           comicType: _mangaMode ? 'Manga' : 'Comic',
-        );
+        )
+        .catchError((Object e) => debugPrint('Error updating comic type: $e'));
+  }
+
+  /// Saves the reading position after the user stops turning pages, so
+  /// dragging the progress bar or swiping fast doesn't write on every page.
+  void _schedulePersist(int page) {
+    _pendingBookmark = page;
+    _persistDebounce?.cancel();
+    _persistDebounce = Timer(_persistDelay, _persistNow);
+  }
+
+  void _persistNow() {
+    _persistDebounce?.cancel();
+    final page = _pendingBookmark;
+    if (page == null) return;
+    _pendingBookmark = null;
+    ref
+        .read(comicControllerProvider.notifier)
+        .createBookmark(widget.comic.id!, page, widget.comic)
+        .catchError((Object e) {
+      debugPrint('Error saving bookmark: $e');
+      return '';
+    });
   }
 
   void _toggleBookMark() {
-    ref
-        .read(comicControllerProvider.notifier)
-        .createBookmark(widget.comic.id!, _currentPageIndex, widget.comic);
+    _pendingBookmark = _currentPageIndex;
+    _persistNow();
   }
 
   void _goBack() {
@@ -113,10 +141,35 @@ class _ComicViewerScreenState extends ConsumerState<ComicViewerScreen> {
     Navigator.pop(context);
   }
 
+  void _handleTap(TapUpDetails details, int totalPages) {
+    final width = MediaQuery.of(context).size.width;
+    final dx = details.localPosition.dx;
+    final tappedLeft = dx < width * 0.3;
+    final tappedRight = dx > width * 0.7;
+
+    if (!tappedLeft && !tappedRight) {
+      _toggleControls();
+      return;
+    }
+
+    // In manga mode the PageView is reversed, so the next page is on the left.
+    final goNext = _mangaMode ? tappedLeft : tappedRight;
+    if (goNext) {
+      if (_currentPageIndex < totalPages - 1) {
+        _pageController.nextPage(
+            duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+      }
+    } else if (_currentPageIndex > 0) {
+      _pageController.previousPage(
+          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+    }
+  }
+
   @override
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _longPressTimer?.cancel();
+    _persistDebounce?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -133,39 +186,16 @@ class _ComicViewerScreenState extends ConsumerState<ComicViewerScreen> {
     return PopScope(
       canPop: !_showControls,
       onPopInvokedWithResult: (bool didPop, dynamic result) {
-        if (!didPop && _showControls) {
+        if (didPop) {
+          _persistNow();
+        } else if (_showControls) {
           _toggleControls();
         }
       },
       child: GestureDetector(
         onLongPressStart: (_) => _startLongPress(),
         onLongPressEnd: (_) => _endLongPress(),
-        onTapUp: (details) {
-          final width = MediaQuery.of(context).size.width;
-          final dx = details.localPosition.dx;
-          final leftZone = width * 0.3;
-          final rightZone = width * 0.7;
-          if (dx < leftZone) {
-            if (_currentPageIndex > 0) {
-              _pageController.previousPage(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut);
-            }
-          } else if (dx > rightZone) {
-            final comicState = ref.read(comicViewerControllerProvider);
-            final images = comicState.maybeWhen(
-              data: (imgs) => imgs,
-              orElse: () => <File>[],
-            );
-            if (_currentPageIndex < images.length - 1) {
-              _pageController.nextPage(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut);
-            }
-          } else {
-            _toggleControls();
-          }
-        },
+        onTapUp: (details) => _handleTap(details, totalPages),
         child: Stack(
           children: [
             _buildComicViewer(comicState),
@@ -240,9 +270,7 @@ class _ComicViewerScreenState extends ConsumerState<ComicViewerScreen> {
             _currentPageIndex = index;
             _previewPageIndex = null;
           });
-          ref
-              .read(comicControllerProvider.notifier)
-              .createBookmark(widget.comic.id!, index, widget.comic);
+          _schedulePersist(index);
         },
       ),
       loading: () => const Center(child: CircularProgressIndicator()),

@@ -266,17 +266,9 @@ void main() {
   });
 
   group('categories', () {
-    // The category queries (getDistinctValues, get*WithCount) compare with
-    // `!= ""`. In SQLite a double-quoted token is an *identifier*; it only
-    // falls back to a string literal when the legacy "DQS" misfeature is
-    // enabled. The SQLite bundled with sqflite_common_ffi (and any build with
-    // SQLITE_DQS=0, which SQLite recommends) rejects it with
-    // `no such column: ""`. Tests below that hit those queries are the
-    // intended spec and are skipped as BUG.
-    const dqsBug = 'BUG: getDistinctValues/getAuthorsWithCount/'
-        'getGenresWithCount/getCollectionsWithCount use `!= ""` (double '
-        'quotes = identifier in SQLite). Fails with "no such column" on '
-        'SQLite builds without legacy DQS support. Use `!= \'\'`.';
+    // Category queries must compare with `!= ''`: a double-quoted "" is an
+    // identifier in SQLite and fails with `no such column` on strict builds
+    // such as the one bundled with sqflite_common_ffi.
 
     setUp(() async {
       await insert(title: 'Z', author: 'Oda', genre: 'Shonen', collection: 'OP', picture: 'b.jpg');
@@ -286,15 +278,9 @@ void main() {
       await insert(title: 'O');
     });
 
-    test('reproduces the double-quoted literal failure on strict SQLite',
+    test('category queries run on strict SQLite (no double-quoted literals)',
         () async {
-      // Documents the BUG with a passing test so a fix is noticed: once the
-      // query uses single quotes this expectation must be flipped.
-      await expectLater(
-        db.getDistinctValues(ComicFields.author),
-        throwsA(isA<DatabaseException>().having(
-            (e) => e.toString(), 'message', contains('no such column'))),
-      );
+      await expectLater(db.getDistinctValues(ComicFields.author), completes);
     });
 
     test('getDistinctValues returns sorted distinct non-empty values',
@@ -302,16 +288,16 @@ void main() {
       expect(await db.getDistinctValues(ComicFields.author), ['Miura', 'Oda']);
       expect(await db.getDistinctValues(ComicFields.genre), ['Seinen', 'Shonen']);
       expect(await db.getDistinctValues(ComicFields.collection), ['OP']);
-    }, skip: dqsBug);
+    });
 
     test('getAuthorsWithCount groups, counts, sorts and picks MIN picture',
         () async {
       final rows = await db.getAuthorsWithCount();
       expect(rows, [
-        {'name': 'Miura', 'count': 1, 'coverPath': ''},
+        {'name': 'Miura', 'count': 1, 'coverPath': null}, // no cover -> null, not ''
         {'name': 'Oda', 'count': 2, 'coverPath': 'a.jpg'},
       ]);
-    }, skip: dqsBug);
+    });
 
     test('getGenresWithCount', () async {
       final rows = await db.getGenresWithCount();
@@ -319,21 +305,21 @@ void main() {
         ['Seinen', 1],
         ['Shonen', 2],
       ]);
-    }, skip: dqsBug);
+    });
 
     test('getCollectionsWithCount', () async {
       final rows = await db.getCollectionsWithCount();
       expect(rows, [
         {'name': 'OP', 'count': 2, 'coverPath': 'a.jpg'},
       ]);
-    }, skip: dqsBug);
+    });
 
     test('rename to an existing name merges the categories (counts)',
         () async {
       await db.updateAuthorName('Miura', 'Oda');
       final rows = await db.getAuthorsWithCount();
       expect(rows.single['count'], 3);
-    }, skip: dqsBug);
+    });
 
     test('getComicsBy* filter and order by title', () async {
       expect((await db.getComicsByAuthor('Oda')).map((c) => c.title), ['A', 'Z']);

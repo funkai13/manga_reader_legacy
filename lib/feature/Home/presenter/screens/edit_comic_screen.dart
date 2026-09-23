@@ -23,7 +23,8 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
   late TextEditingController _authorController;
   late TextEditingController _genreController;
   late TextEditingController _collectionController;
-  late String _comicType;
+  // null = auto (not chosen yet); the viewer reads it as left-to-right.
+  String? _comicType;
 
   @override
   void initState() {
@@ -33,7 +34,7 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
     _genreController = TextEditingController(text: widget.comic.genre ?? '');
     _collectionController =
         TextEditingController(text: widget.comic.collection ?? '');
-    _comicType = widget.comic.comicType ?? 'Manga';
+    _comicType = widget.comic.comicType;
   }
 
   @override
@@ -60,7 +61,9 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
           collection: _collectionController.text.isEmpty
               ? null
               : _collectionController.text,
-          comicType: _comicType,
+          // Only persist the type when the user actually picked one.
+          comicType:
+              _comicType != widget.comic.comicType ? _comicType : null,
           title: _titleController.text,
         );
 
@@ -236,10 +239,11 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
                         icon: Icon(Icons.menu_book),
                       ),
                     ],
-                    selected: {_comicType},
+                    selected: {if (_comicType != null) _comicType!},
+                    emptySelectionAllowed: _comicType == null,
                     onSelectionChanged: (Set<String> newSelection) {
                       setState(() {
-                        _comicType = newSelection.first;
+                        _comicType = newSelection.firstOrNull;
                       });
                     },
                     style: ButtonStyle(
