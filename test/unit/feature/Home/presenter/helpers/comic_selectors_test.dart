@@ -39,35 +39,43 @@ void main() {
       expect(container.read(lastAddedComicsProvider), isEmpty);
     });
 
-    test('sorts by lastOpened desc and takes 6', () async {
+    test('sorts by id desc (newest imported first) and takes 6', () async {
       final comics = [
         for (var i = 1; i <= 8; i++)
           buildComicEntity(
-              id: i, lastOpened: DateTime(2025, 1, i).toIso8601String()),
+              // lastOpened must not affect the order.
+              id: i,
+              lastOpened: DateTime(2025, 1, 9 - i).toIso8601String()),
       ]..shuffle();
       final c = await withComics(comics);
-      expect(c.read(lastAddedComicsProvider).map((e) => e.id),
-          [8, 7, 6, 5, 4, 3]);
+      expect(
+          c.read(lastAddedComicsProvider).map((e) => e.id), [8, 7, 6, 5, 4, 3]);
     });
 
     test('fewer than 6 returns all', () async {
       final c = await withComics([
-        buildComicEntity(id: 1, lastOpened: '2025-01-01T00:00:00'),
-        buildComicEntity(id: 2, lastOpened: '2025-03-01T00:00:00'),
+        buildComicEntity(id: 1, lastOpened: '2025-03-01T00:00:00'),
+        buildComicEntity(id: 2, lastOpened: '2025-01-01T00:00:00'),
       ]);
       expect(c.read(lastAddedComicsProvider).map((e) => e.id), [2, 1]);
     });
 
-    test(
-      'tolerates comics with empty/invalid lastOpened',
-      () async {
-        final c = await withComics([
-          buildComicEntity(id: 1, lastOpened: ''),
-          buildComicEntity(id: 2, lastOpened: '2025-03-01T00:00:00'),
-        ]);
-        expect(c.read(lastAddedComicsProvider).first.id, 2);
-      },
-    );
+    test('is not the same list as "Continuar Leyendo"', () async {
+      final c = await withComics([
+        buildComicEntity(
+            id: 1, isReading: true, lastOpened: '2025-06-01T00:00:00'),
+        buildComicEntity(id: 2, lastOpened: '2025-01-01T00:00:00'),
+      ]);
+      expect(c.read(lastAddedComicsProvider).first.id, 2);
+    });
+
+    test('comics without id go last', () async {
+      final c = await withComics([
+        buildComicEntity(id: null),
+        buildComicEntity(id: 2),
+      ]);
+      expect(c.read(lastAddedComicsProvider).first.id, 2);
+    });
   });
 
   group('readingNowComicsProvider', () {
@@ -93,14 +101,14 @@ void main() {
   });
 
   group('unreadComicsProvider', () {
-    test('page 0 and not reading', () async {
+    test('page 0, not reading and not completed', () async {
       final c = await withComics([
         buildComicEntity(id: 1),
         buildComicEntity(id: 2, currentReadPage: 3),
         buildComicEntity(id: 3, isReading: true),
         buildComicEntity(id: 4, isCompleted: true),
       ]);
-      expect(c.read(unreadComicsProvider).map((e) => e.id), [1, 4]);
+      expect(c.read(unreadComicsProvider).map((e) => e.id), [1]);
     });
 
     test('empty library', () async {
