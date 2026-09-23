@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 
 import 'package:flutter/material.dart';
 
@@ -95,7 +96,17 @@ class _ComicPageState extends State<ComicPage> with TickerProviderStateMixin {
         onInteractionUpdate: (_) => widget.onScaleChanged(
           _transformationController.value.getMaxScaleOnAxis(),
         ),
-        child: Image.file(widget.image),
+        // Decode at twice the screen width: sharp when zoomed, but a 4000 px
+        // scan no longer takes ~100 MB of memory per page.
+        child: Image(
+          image: decodedAtWidth(
+            FileImage(widget.image),
+            MediaQuery.sizeOf(context).width *
+                MediaQuery.devicePixelRatioOf(context) *
+                2,
+          ),
+          gaplessPlayback: true,
+        ),
       ),
     );
   }

@@ -1,396 +1,115 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-
-import 'package:archive/archive.dart';
-import 'package:manga_reader/feature/Home/domain/exceptions/comic_exceptions.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:unrar_file/unrar_file.dart';
-
 import '../../domain/entity/comic.dart';
 import '../../domain/repositories/comic_repository.dart';
 import '../datasources/comic_database.dart';
 import '../models/comic_fields.dart';
 import '../models/comic_model.dart';
+import '../services/comic_archive_extractor.dart';
+import '../services/comic_storage.dart';
 
 class ComicRepositoryImpl implements ComicRepository {
   final ComicDatabase datasource;
+  final ComicStorage storage;
+  final ComicArchiveExtractor extractor;
 
-  ComicRepositoryImpl(this.datasource);
+  ComicRepositoryImpl(
+    this.datasource, {
+    ComicStorage? storage,
+    this.extractor = const ComicArchiveExtractor(),
+  }) : storage = storage ?? ComicStorage();
 
-  @override
-  Future<ComicEntity?> getComicByPath(String path) async {
-    final comicModel = await datasource.getComicByPath(path);
-    if (comicModel == null) {
-      return null;
-    }
-    return ComicEntity(
-      id: comicModel.id,
-      filePath: comicModel.filePath,
-      title: comicModel.title,
-      picture: comicModel.picture,
-      currentReadPage: comicModel.currentReadPage,
-      totalPages: comicModel.totalPages,
-      lastOpened: comicModel.lastOpened,
-      currentReading: comicModel.currentReading,
-      imagesPath: comicModel.imagesPath,
-      isFavorite: comicModel.isFavorite,
-      isReading: comicModel.isReading,
-      rating: comicModel.rating,
-      bookMarks: comicModel.bookMarks,
-      isCompleted: comicModel.isCompleted,
-      author: comicModel.author,
-      genre: comicModel.genre,
-      collection: comicModel.collection,
-      comicType: comicModel.comicType,
-    );
-  }
+  /// Maps a DB row to an entity with paths resolved for this device.
+  Future<ComicEntity> _toEntity(ComicModel m) async => ComicEntity(
+        id: m.id,
+        filePath: m.filePath,
+        title: m.title,
+        picture: await storage.resolve(m.picture),
+        currentReadPage: m.currentReadPage,
+        totalPages: m.totalPages,
+        lastOpened: m.lastOpened,
+        currentReading: m.currentReading,
+        imagesPath: await storage.resolve(m.imagesPath),
+        isFavorite: m.isFavorite,
+        isReading: m.isReading,
+        rating: m.rating,
+        bookMarks: m.bookMarks,
+        isCompleted: m.isCompleted,
+        author: m.author,
+        genre: m.genre,
+        collection: m.collection,
+        comicType: m.comicType,
+      );
 
-  @override
-  Future<ComicEntity?> getComicByTitle(String title) async {
-    final comicModel = await datasource.getComicByTitle(title);
-    if (comicModel == null) {
-      return null;
-    }
-    return ComicEntity(
-      id: comicModel.id,
-      filePath: comicModel.filePath,
-      title: comicModel.title,
-      picture: comicModel.picture,
-      currentReadPage: comicModel.currentReadPage,
-      totalPages: comicModel.totalPages,
-      lastOpened: comicModel.lastOpened,
-      currentReading: comicModel.currentReading,
-      imagesPath: comicModel.imagesPath,
-      isFavorite: comicModel.isFavorite,
-      isReading: comicModel.isReading,
-      rating: comicModel.rating,
-      bookMarks: comicModel.bookMarks,
-      isCompleted: comicModel.isCompleted,
-      author: comicModel.author,
-      genre: comicModel.genre,
-      collection: comicModel.collection,
-      comicType: comicModel.comicType,
-    );
-  }
+  Future<ComicEntity?> _toEntityOrNull(ComicModel? m) async =>
+      m == null ? null : _toEntity(m);
+
+  Future<List<ComicEntity>> _toEntities(List<ComicModel> models) =>
+      Future.wait(models.map(_toEntity));
 
   @override
-  Future<ComicEntity?> getComicByFilenameMatch(String filename) async {
-    final comicModel = await datasource.getComicByFilenameMatch(filename);
-    if (comicModel == null) {
-      return null;
-    }
-    return ComicEntity(
-      id: comicModel.id,
-      filePath: comicModel.filePath,
-      title: comicModel.title,
-      picture: comicModel.picture,
-      currentReadPage: comicModel.currentReadPage,
-      totalPages: comicModel.totalPages,
-      lastOpened: comicModel.lastOpened,
-      currentReading: comicModel.currentReading,
-      imagesPath: comicModel.imagesPath,
-      isFavorite: comicModel.isFavorite,
-      isReading: comicModel.isReading,
-      rating: comicModel.rating,
-      bookMarks: comicModel.bookMarks,
-      isCompleted: comicModel.isCompleted,
-      author: comicModel.author,
-      genre: comicModel.genre,
-      collection: comicModel.collection,
-      comicType: comicModel.comicType,
-    );
-  }
+  Future<ComicEntity?> getComicByPath(String path) async =>
+      _toEntityOrNull(await datasource.getComicByPath(path));
 
+  @override
+  Future<ComicEntity?> getComicByTitle(String title) async =>
+      _toEntityOrNull(await datasource.getComicByTitle(title));
+
+  @override
+  Future<ComicEntity?> getComicByFilenameMatch(String filename) async =>
+      _toEntityOrNull(await datasource.getComicByFilenameMatch(filename));
+
+  /// Extracts the archive first and inserts the row only once the pages are
+  /// on disk, so a crash or a bad file never leaves a comic without images.
+  /// Metadata the caller didn't provide is taken from ComicInfo.xml.
   @override
   Future<ComicEntity> addComic(ComicEntity comic) async {
     final existingComic = await datasource.getComicByTitle(comic.title);
+    if (existingComic != null) return _toEntity(existingComic);
 
-    if (existingComic != null) {
-      return ComicEntity(
-        id: existingComic.id,
-        filePath: existingComic.filePath,
-        title: existingComic.title,
-        picture: existingComic.picture,
-        currentReadPage: existingComic.currentReadPage,
-        totalPages: existingComic.totalPages,
-        lastOpened: existingComic.lastOpened,
-        currentReading: existingComic.currentReading,
-        imagesPath: existingComic.imagesPath,
-        isFavorite: existingComic.isFavorite,
-        isReading: existingComic.isReading,
-        rating: existingComic.rating,
-        bookMarks: existingComic.bookMarks,
-        isCompleted: existingComic.isCompleted,
-        author: existingComic.author,
-        genre: existingComic.genre,
-        collection: existingComic.collection,
-        comicType: existingComic.comicType,
-      );
-    }
-
-    final comicModel = ComicModel(
-      id: null,
-      filePath: comic.filePath,
-      title: comic.title,
-      picture: comic.picture,
-      currentReadPage: comic.currentReadPage,
-      totalPages: comic.totalPages,
-      lastOpened: comic.lastOpened,
-      currentReading: comic.currentReading,
-      imagesPath: comic.imagesPath,
-      isFavorite: comic.isFavorite,
-      isReading: comic.isReading,
-      rating: comic.rating,
-      bookMarks: comic.bookMarks,
-      isCompleted: comic.isCompleted,
-      author: comic.author,
-      genre: comic.genre,
-      collection: comic.collection,
-      comicType: comic.comicType,
-    );
-
-    final newId = await datasource.addComic(comicModel);
-
-    final folderPath = await _getComicFolderPath(newId);
+    final folder = await storage.newComicFolder();
     try {
-      final extractedFiles =
-          await _extractComicToFolder(comic.filePath, folderPath);
+      final extracted = await extractor.extract(comic.filePath, folder);
+      final info = extracted.info;
+      final picture = extracted.thumbnail ?? extracted.pages.first;
 
-      extractedFiles.sort((a, b) => a.path.compareTo(b.path));
-
-      final String? thumbnailPath =
-          extractedFiles.isNotEmpty ? extractedFiles.first.path : null;
-
-      await datasource.updateComic(
-        id: newId,
-        imagesPath: folderPath,
-        picture: thumbnailPath,
-        totalPages: extractedFiles.length,
-      );
-      return ComicEntity(
-        id: newId,
+      final model = ComicModel(
+        id: null,
         filePath: comic.filePath,
         title: comic.title,
-        picture: thumbnailPath ?? '',
+        picture: await storage.toStored(picture),
         currentReadPage: comic.currentReadPage,
-        totalPages: extractedFiles.length,
+        totalPages: extracted.pages.length,
         lastOpened: comic.lastOpened,
         currentReading: comic.currentReading,
-        imagesPath: folderPath,
+        imagesPath: await storage.toStored(folder),
         isFavorite: comic.isFavorite,
         isReading: comic.isReading,
         rating: comic.rating,
         bookMarks: comic.bookMarks,
         isCompleted: comic.isCompleted,
-        author: comic.author,
-        genre: comic.genre,
-        collection: comic.collection,
-        comicType: comic.comicType,
+        author: _orNull(comic.author) ?? info?.writer,
+        genre: _orNull(comic.genre) ?? info?.genre,
+        collection: _orNull(comic.collection) ?? info?.series,
+        comicType: comic.comicType ?? info?.comicType,
       );
-    } on UnsupportedComicException {
-      await _cleanupFailedInsert(newId, folderPath);
+
+      final newId = await datasource.addComic(model);
+      return await _toEntity(
+          ComicModel.fromMap({...model.toMap(), ComicFields.id: newId}));
+    } catch (_) {
+      final dir = Directory(folder);
+      if (await dir.exists()) await dir.delete(recursive: true);
       rethrow;
-    } catch (e) {
-      await _cleanupFailedInsert(newId, folderPath);
-      rethrow;
     }
   }
 
-  Future<void> _cleanupFailedInsert(int id, String folderPath) async {
-    await datasource.deleteComic(id);
-
-    final dir = Directory(folderPath);
-    if (await dir.exists()) {
-      await dir.delete(recursive: true);
-    }
-  }
-
-  Future<String> _getComicFolderPath(int comicId) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final path = p.join(appDir.path, 'comics', comicId.toString());
-    final dir = Directory(path);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return path;
-  }
-
-  Future<List<File>> _extractComicToFolder(
-    String archivePath,
-    String outputDir,
-  ) async {
-    final ext = p.extension(archivePath).toLowerCase();
-
-    final archiveFile = File(archivePath);
-    if (!await archiveFile.exists()) {
-      return <File>[];
-    }
-
-    final tempOutput = Directory(p.join(outputDir, 'temp_extract'));
-    if (!tempOutput.existsSync()) {
-      tempOutput.createSync(recursive: true);
-    }
-
-    final rawExtracted = <File>[];
-    final seenPaths = <String>{};
-
-    if (ext == '.cbz') {
-      try {
-        final bytes = await archiveFile.readAsBytes();
-        // Use compute to run decodeBytes in a separate isolate
-        final archive = await compute(_decodeZip, bytes);
-
-        for (final ent in archive) {
-          if (!ent.isFile) continue;
-          if (!_isImageName(ent.name)) continue;
-
-          final destPath = p.join(tempOutput.path, ent.name);
-          if (seenPaths.contains(destPath)) {
-            continue;
-          }
-
-          final outFile = File(destPath);
-          outFile.createSync(recursive: true);
-          await outFile.writeAsBytes(ent.content as List<int>);
-          rawExtracted.add(outFile);
-          seenPaths.add(destPath);
-        }
-      } catch (e) {
-        throw UnsupportedComicException(
-          'No se pudo leer el archivo CBZ. El archivo puede estar corrupto.',
-        );
-      }
-    } else if (ext == '.cbr') {
-      final tempDir = Directory.systemTemp.createTempSync();
-
-      try {
-        await UnrarFile.extract_rar(archivePath, tempDir.path);
-
-        final files = tempDir
-            .listSync(recursive: true)
-            .whereType<File>()
-            .where((f) => _isImagePath(f.path))
-            .toList();
-
-        for (final f in files) {
-          final destPath = p.join(tempOutput.path, p.basename(f.path));
-
-          if (seenPaths.contains(destPath)) {
-            continue;
-          }
-
-          final dest = File(destPath);
-          await f.copy(dest.path);
-          rawExtracted.add(dest);
-          seenPaths.add(destPath);
-        }
-      } catch (e) {
-        throw UnsupportedComicException(
-          'No se pudo extraer el archivo CBR (posiblemente RAR5 no soportado).',
-        );
-      } finally {
-        tempDir.deleteSync(recursive: true);
-      }
-    }
-
-    if (rawExtracted.isEmpty) {
-      throw UnsupportedComicException(
-        'El archivo no contiene imágenes soportadas (.jpg, .jpeg, .png).',
-      );
-    }
-
-    rawExtracted.sort((a, b) => _naturalSort(a.path, b.path));
-
-    final finalFiles = <File>[];
-    var index = 1;
-
-    for (final original in rawExtracted) {
-      final srcFile = File(original.path);
-      if (!srcFile.existsSync()) {
-        continue;
-      }
-
-      final pageExt = p.extension(original.path).toLowerCase();
-      final newPath = p.join(
-        outputDir,
-        index.toString().padLeft(4, '0') + pageExt,
-      );
-
-      final f = await srcFile.rename(newPath);
-      finalFiles.add(f);
-      index++;
-    }
-
-    if (tempOutput.existsSync()) {
-      tempOutput.deleteSync(recursive: true);
-    }
-
-    return finalFiles;
-  }
-
-  bool _isImagePath(String path) => _isImageName(p.basename(path));
-
-  bool _isImageName(String name) {
-    final lower = name.toLowerCase();
-    return lower.endsWith('.jpg') ||
-        lower.endsWith('.jpeg') ||
-        lower.endsWith('.png');
-  }
-
-  int _naturalSort(String a, String b) {
-    final regex = RegExp(r'(\d+)|(\D+)');
-    final aMatches = regex.allMatches(a).map((m) => m.group(0)!).toList();
-    final bMatches = regex.allMatches(b).map((m) => m.group(0)!).toList();
-
-    for (var i = 0; i < aMatches.length && i < bMatches.length; i++) {
-      final aPart = aMatches[i];
-      final bPart = bMatches[i];
-
-      final aNum = int.tryParse(aPart);
-      final bNum = int.tryParse(bPart);
-
-      if (aNum != null && bNum != null) {
-        final diff = aNum.compareTo(bNum);
-        if (diff != 0) return diff;
-      } else {
-        final diff = aPart.compareTo(bPart);
-        if (diff != 0) return diff;
-      }
-    }
-
-    return aMatches.length.compareTo(bMatches.length);
-  }
+  static String? _orNull(String? value) =>
+      value == null || value.trim().isEmpty ? null : value;
 
   @override
-  Future<List<ComicEntity>> getAllComics() async {
-    final models = await datasource.fetchAllComics();
-    return models
-        .map(
-          (m) => ComicEntity(
-            id: m.id,
-            filePath: m.filePath,
-            title: m.title,
-            picture: m.picture,
-            currentReadPage: m.currentReadPage,
-            totalPages: m.totalPages,
-            lastOpened: m.lastOpened,
-            currentReading: m.currentReading,
-            imagesPath: m.imagesPath,
-            isFavorite: m.isFavorite,
-            isReading: m.isReading,
-            rating: m.rating,
-            bookMarks: m.bookMarks,
-            isCompleted: m.isCompleted,
-            author: m.author,
-            genre: m.genre,
-            collection: m.collection,
-            comicType: m.comicType,
-          ),
-        )
-        .toList();
-  }
+  Future<List<ComicEntity>> getAllComics() async =>
+      _toEntities(await datasource.fetchAllComics());
 
   @override
   Future<void> addBookMark(int id, int bookmark) async {
@@ -442,22 +161,14 @@ class ComicRepositoryImpl implements ComicRepository {
   }
 
   @override
-  Future<List<ComicEntity>> getComicsByAuthor(String author) async {
-    return await datasource.getComicsByAuthor(author);
-  }
+  Future<List<ComicEntity>> getComicsByAuthor(String author) async =>
+      _toEntities(await datasource.getComicsByAuthor(author));
 
   @override
-  Future<List<ComicEntity>> getComicsByGenre(String genre) async {
-    return await datasource.getComicsByGenre(genre);
-  }
+  Future<List<ComicEntity>> getComicsByGenre(String genre) async =>
+      _toEntities(await datasource.getComicsByGenre(genre));
 
   @override
-  Future<List<ComicEntity>> getComicsByCollection(String collection) async {
-    return await datasource.getComicsByCollection(collection);
-  }
-}
-
-// Top-level function for compute
-Archive _decodeZip(List<int> bytes) {
-  return ZipDecoder().decodeBytes(bytes);
+  Future<List<ComicEntity>> getComicsByCollection(String collection) async =>
+      _toEntities(await datasource.getComicsByCollection(collection));
 }

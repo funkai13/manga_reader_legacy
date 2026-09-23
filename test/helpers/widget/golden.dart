@@ -56,6 +56,10 @@ Future<void> pumpGolden(
     wrapInScaffold: wrapInScaffold,
   );
   await tester.pumpAndSettle();
+  // Widgets decode files at their display size (ResizeImage), a cache key
+  // that precache can't know in advance; let those real decodes finish.
+  await settleRealIo(tester, rounds: 20);
+  await tester.pumpAndSettle();
 }
 
 /// Compares [finder] against the golden [file] and restores

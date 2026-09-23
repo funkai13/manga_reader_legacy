@@ -60,7 +60,7 @@ void main() {
     final result = container.read(comicViewerControllerProvider);
     expect(result, isA<AsyncData<List<File>>>());
     expect(result.value!.map((f) => p.basename(f.path)).toSet(),
-        {'0001.jpg', '0002.JPEG', '0003.png'});
+        {'0001.jpg', '0002.JPEG', '0003.png', 'cover.gif'});
   });
 
   test('loadComic marks the comic as reading in ComicController', () async {

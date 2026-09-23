@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -45,8 +45,8 @@ class CategoryCard extends StatelessWidget {
             children: [
               // Background Image
               if (category.coverPath != null)
-                Image.file(
-                  File(category.coverPath!),
+                FileThumbnail(
+                  category.coverPath!,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     color: isDark

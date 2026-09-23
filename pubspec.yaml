@@ -49,6 +49,7 @@ dependencies:
     git:
       url: https://github.com/Makarov96/unrar_file_fork
       ref: master
+  image: ^4.10.1
   
 
 

@@ -1,10 +1,7 @@
 import 'dart:async';
 
-import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:manga_reader/feature/Home/domain/exceptions/comic_exceptions.dart';
-import 'package:manga_reader/feature/Home/presenter/widgets/comic_metadata_dialog.dart';
+import 'package:path/path.dart' as p;
 
 import '../../domain/entity/comic.dart';
 import '../../domain/provider/comic_provider.dart';
@@ -17,39 +14,24 @@ class ComicController extends AsyncNotifier<List<ComicEntity>> {
     return comics;
   }
 
-  Future<void> addComic(BuildContext context) async {
+  static bool isSupportedArchive(String fileName) {
+    final extension = p.extension(fileName).toLowerCase();
+    return extension == '.cbz' || extension == '.cbr';
+  }
+
+  /// Whether a comic with this file name was already imported: by title, or
+  /// by file name when the user renamed the comic in the app.
+  Future<bool> isAlreadyImported(String fileName) async {
     final comicRepository = ref.read(comicRepositoryProvider);
+    return await comicRepository.getComicByTitle(fileName) != null ||
+        await comicRepository.getComicByFilenameMatch(fileName) != null;
+  }
 
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-    );
-
-    if (result != null && result.files.isNotEmpty) {
-      final filePath = result.files.single.path;
-      final fileName = result.files.single.name;
-      final extension = fileName.split('.').last.toLowerCase();
-
-      if (extension == 'cbr' || extension == 'cbz') {
-        if (filePath != null) {
-          // 0. Duplicate Check (Title/Filename)
-          // First check by exact title (fastest)
-          var existingComic = await comicRepository.getComicByTitle(fileName);
-          
-          // If not found, check if any existing comic has this filename in its path
-          // This handles cases where the user renamed the comic in the app
-          existingComic ??= await comicRepository.getComicByFilenameMatch(fileName);
-
-          if (existingComic != null) {
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Este cómic ya está en tu biblioteca.'),
-              ),
-            );
-            return;
-          }
-
-          final newComicEntity = ComicEntity(
+  /// Extracts and stores the comic. The list is refreshed by [finishImport]
+  /// once the user is done with the metadata dialog.
+  Future<ComicEntity> importComic(String filePath, String fileName) {
+    return ref.read(comicRepositoryProvider).addComic(
+          ComicEntity(
             filePath: filePath,
             title: fileName,
             currentReadPage: 0,
@@ -63,124 +45,33 @@ class ComicController extends AsyncNotifier<List<ComicEntity>> {
             rating: null,
             bookMarks: '',
             isCompleted: false,
-          );
-          
-          bool isSpinnerOpen = false;
-          bool isMetadataOpen = false;
-          bool processingFailed = false;
-
-          try {
-            // 1. Show loading spinner immediately
-            if (!context.mounted) return;
-            isSpinnerOpen = true;
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => const Center(
-                child: CircularProgressIndicator(),
-              ),
-            ).then((_) => isSpinnerOpen = false);
-
-            // 2. Start processing in background with error handling
-            final processingFuture = comicRepository
-                .addComic(newComicEntity)
-                .onError((error, stackTrace) {
-              processingFailed = true;
-              // Close dialog if open and error occurs
-              if (context.mounted && (isSpinnerOpen || isMetadataOpen)) {
-                Navigator.of(context).maybePop();
-              }
-              if (error != null) {
-                 throw error;
-              } else {
-                 throw Exception('Unknown error during processing');
-              }
-            });
-
-            // 3. Wait a bit to ensure spinner is seen
-            await Future.delayed(const Duration(milliseconds: 500));
-
-            // Check if processing already failed
-            if (processingFailed) {
-              // If failed, the onError callback should have popped the spinner.
-              // We just await the future to let the catch block handle the error.
-              await processingFuture;
-              return;
-            }
-
-            // 4. Close spinner and show metadata dialog
-            if (!context.mounted) return;
-            if (isSpinnerOpen) {
-              Navigator.of(context).pop(); // Close spinner
-              isSpinnerOpen = false;
-            }
-
-            isMetadataOpen = true;
-            final dialogFuture = showDialog<Map<String, String>?>(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => ComicMetadataDialog(fileName: fileName),
-            ).then((value) {
-              isMetadataOpen = false;
-              return value;
-            });
-
-            // 5. Wait for both
-            final results = await Future.wait([
-              processingFuture,
-              dialogFuture,
-            ], eagerError: false);
-
-            final createdComic = results[0] as ComicEntity;
-            final metadata = results[1] as Map<String, String>?;
-
-            // 4. Update metadata if provided
-            if (metadata != null) {
-              await comicRepository.updateComicMetadata(
-                id: createdComic.id!,
-                title: metadata['title'],
-                author: metadata['author'],
-                genre: metadata['genre'],
-                collection: metadata['collection'],
-                comicType: metadata['comicType'],
-              );
-            }
-
-            // 5. Update state
-            final updatedList = await comicRepository.getAllComics();
-            state = AsyncData(updatedList);
-          } on UnsupportedComicException catch (e) {
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  e.message.isNotEmpty
-                      ? e.message
-                      : 'Este archivo de cómic no está soportado.',
-                ),
-              ),
-            );
-          } catch (e) {
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Ocurrió un error al agregar el cómic.'),
-              ),
-            );
-          }
-        }
-      } else {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Seleccione un archivo con extensión .cbr o .cbz"),
           ),
         );
-      }
-    } else {
-      // No file selected
-    }
   }
+
+  /// Applies the metadata the user entered (empty fields keep what the
+  /// archive's ComicInfo.xml provided) and refreshes the list.
+  Future<void> finishImport(
+    ComicEntity created,
+    Map<String, String>? metadata,
+  ) async {
+    final comicRepository = ref.read(comicRepositoryProvider);
+    if (metadata != null) {
+      await comicRepository.updateComicMetadata(
+        id: created.id!,
+        title: _nonEmpty(metadata['title']),
+        author: _nonEmpty(metadata['author']),
+        genre: _nonEmpty(metadata['genre']),
+        collection: _nonEmpty(metadata['collection']),
+        comicType: metadata['comicType'],
+      );
+    }
+    final comics = await comicRepository.getAllComics();
+    if (ref.mounted) state = AsyncData(comics);
+  }
+
+  static String? _nonEmpty(String? value) =>
+      value == null || value.trim().isEmpty ? null : value.trim();
 
   Future<List<ComicEntity>> getAllComics() async {
     final comicRepository = ref.read(comicRepositoryProvider);

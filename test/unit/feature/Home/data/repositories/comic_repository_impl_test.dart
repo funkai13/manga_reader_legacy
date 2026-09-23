@@ -3,7 +3,12 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_reader/feature/Home/data/models/comic_fields.dart';
+import 'package:image/image.dart' as img;
+import 'package:manga_reader/feature/Home/data/models/comic_model.dart';
 import 'package:manga_reader/feature/Home/data/repositories/comic_repository_impl.dart';
+import 'package:manga_reader/feature/Home/data/services/comic_archive_extractor.dart';
+import 'package:manga_reader/feature/Home/data/services/comic_storage.dart';
+import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Home/domain/exceptions/comic_exceptions.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
@@ -33,9 +38,10 @@ void main() {
 
   setUp(() {
     db = MockComicDatabase();
-    repo = ComicRepositoryImpl(db);
     sandbox = createTempDir('repo_src_');
     appDocs = createTempDir('repo_docs_');
+    repo = ComicRepositoryImpl(db,
+        storage: ComicStorage(documentsDirectory: () async => appDocs));
     PathProviderPlatform.instance = FakePathProviderPlatform(appDocs.path);
 
     when(() => db.getComicByTitle(any())).thenAnswer((_) async => null);
@@ -50,14 +56,33 @@ void main() {
     deleteQuietly(appDocs);
   });
 
-  String comicFolder([int id = newId]) =>
-      p.join(appDocs.path, 'comics', id.toString());
+  /// The comics root inside the fake documents directory.
+  Directory comicsRoot() => Directory(p.join(appDocs.path, 'comics'));
 
-  List<String> folderContents([int id = newId]) {
-    final dir = Directory(comicFolder(id));
-    if (!dir.existsSync()) return [];
-    return dir.listSync().map((e) => p.basename(e.path)).toList()..sort();
-  }
+  /// Folders left under comics/ (must be empty after a failed import).
+  List<String> leftovers() => comicsRoot().existsSync()
+      ? comicsRoot().listSync().map((e) => p.basename(e.path)).toList()
+      : [];
+
+  List<String> pageFiles(String folder) => Directory(folder)
+      .listSync()
+      .whereType<File>()
+      .map((f) => p.basename(f.path))
+      .toList()
+    ..sort();
+
+  List<int> firstBytesInOrder(String folder) => [
+        for (final n in pageFiles(folder))
+          File(p.join(folder, n)).readAsBytesSync().first
+      ];
+
+  ComicModel insertedModel() =>
+      verify(() => db.addComic(captureAny())).captured.single as ComicModel;
+
+  Future<ComicEntity> importFile(File file, {ComicEntity? comic}) =>
+      repo.addComic(comic ??
+          buildComicEntity(
+              id: null, title: p.basename(file.path), filePath: file.path));
 
   group('addComic', () {
     test('returns the existing comic without inserting when title exists',
@@ -74,49 +99,65 @@ void main() {
       verifyNever(() => db.addComic(any()));
     });
 
-    test('inserts with id=null and the entity data', () async {
-      final file = buildArchive(sandbox, 'a.cbz', {'1.jpg': fakeJpg});
-      await repo.addComic(buildComicEntity(
-          id: 99, title: 'a.cbz', filePath: file.path, author: 'Oda'));
-
-      final inserted = verify(() => db.addComic(captureAny())).captured.single
-          as dynamic;
-      expect(inserted.id, isNull);
-      expect(inserted.title, 'a.cbz');
-      expect(inserted.filePath, file.path);
-      expect(inserted.author, 'Oda');
-    });
-
-    test('extracts CBZ pages in natural order, renames and updates DB',
-        () async {
+    test('extracts first, then inserts once with relative paths', () async {
       final file = buildArchive(sandbox, 'naruto.cbz', {
         'page10.jpg': fakeJpg,
         'page2.png': fakePng,
         'page1.jpg': fakeJpg,
-        'ComicInfo.xml': comicInfoXml(title: 'Naruto', writer: 'Kishimoto'),
         'notes.txt': 'hello',
         'thumbs.db': [1, 2, 3],
       });
 
-      final result = await repo.addComic(buildComicEntity(
-          id: null, title: 'naruto.cbz', filePath: file.path));
+      final result = await importFile(file,
+          comic: buildComicEntity(
+              id: 99, title: 'naruto.cbz', filePath: file.path, author: 'Oda'));
 
-      final folder = comicFolder();
-      expect(folderContents(), ['0001.jpg', '0002.png', '0003.jpg']);
-      expect(Directory(p.join(folder, 'temp_extract')).existsSync(), isFalse);
+      final folder = result.imagesPath;
+      expect(p.isWithin(comicsRoot().path, folder), isTrue);
       // page1 -> 0001, page2 -> 0002 (png), page10 -> 0003
+      expect(pageFiles(folder), ['0001.jpg', '0002.png', '0003.jpg']);
       expect(File(p.join(folder, '0002.png')).readAsBytesSync(), fakePng);
-
+      // Fake bytes can't be decoded, so the cover falls back to page 1.
+      expect(result.picture, p.join(folder, '0001.jpg'));
       expect(result.id, newId);
       expect(result.totalPages, 3);
-      expect(result.imagesPath, folder);
-      expect(result.picture, p.join(folder, '0001.jpg'));
 
-      final call = captureUpdateComicCalls(db).single;
-      expect(call['id'], newId);
-      expect(call['imagesPath'], folder);
-      expect(call['picture'], p.join(folder, '0001.jpg'));
-      expect(call['totalPages'], 3);
+      final inserted = insertedModel();
+      expect(inserted.id, isNull);
+      expect(inserted.title, 'naruto.cbz');
+      expect(inserted.filePath, file.path);
+      expect(inserted.author, 'Oda');
+      expect(inserted.totalPages, 3);
+      final relativeFolder = 'comics/${p.basename(folder)}';
+      expect(inserted.imagesPath, relativeFolder);
+      expect(inserted.picture, '$relativeFolder/0001.jpg');
+      // No insert-then-update: a failed import never leaves a zombie row.
+      verifyNever(() => db.updateComic(
+            id: any(named: 'id'),
+            imagesPath: any(named: 'imagesPath'),
+            picture: any(named: 'picture'),
+            totalPages: any(named: 'totalPages'),
+          ));
+    });
+
+    test('creates a cover thumbnail outside the page list', () async {
+      final page = img.Image(width: 1200, height: 1800);
+      img.fill(page, color: img.ColorRgb8(200, 30, 30));
+      final file = buildArchive(sandbox, 'real.cbz', {
+        '01.png': img.encodePng(page),
+        '02.png': img.encodePng(page),
+      });
+
+      final result = await importFile(file);
+
+      expect(result.picture,
+          p.join(result.imagesPath, thumbnailFolderName, 'cover.jpg'));
+      final thumb = img.decodeJpg(File(result.picture).readAsBytesSync())!;
+      expect(thumb.width, 400);
+      expect(thumb.height, 600);
+      expect(pageFiles(result.imagesPath), ['0001.png', '0002.png']);
+      expect(insertedModel().picture,
+          'comics/${p.basename(result.imagesPath)}/thumb/cover.jpg');
     });
 
     test('natural sort handles nested chapter folders (ch2 < ch10)',
@@ -129,15 +170,18 @@ void main() {
         'ch1/001.jpg': [11],
       });
 
-      await repo.addComic(
-          buildComicEntity(id: null, title: 'vol.cbz', filePath: file.path));
+      final result = await importFile(file);
+      expect(firstBytesInOrder(result.imagesPath), [11, 12, 2, 10]);
+    });
 
-      final folder = comicFolder();
-      final order = [
-        for (final n in folderContents())
-          File(p.join(folder, n)).readAsBytesSync().first
-      ];
-      expect(order, [11, 12, 2, 10]);
+    test('natural sort ignores case (page2 < Page10)', () async {
+      final file = buildArchive(sandbox, 'case.cbz', {
+        'Page10.jpg': [10],
+        'page2.jpg': [2],
+        'PAGE1.jpg': [1],
+      });
+      final result = await importFile(file);
+      expect(firstBytesInOrder(result.imagesPath), [1, 2, 10]);
     });
 
     test('accepts upper-case extensions (.CBZ archive, .JPG/.JPEG pages)',
@@ -147,260 +191,263 @@ void main() {
         'A.JPG': fakeJpg,
       });
 
-      final result = await repo.addComic(
-          buildComicEntity(id: null, title: 'UPPER.CBZ', filePath: file.path));
+      final result = await importFile(file);
 
       expect(result.totalPages, 2);
-      expect(folderContents(), ['0001.jpg', '0002.jpeg']);
+      expect(pageFiles(result.imagesPath), ['0001.jpg', '0002.jpeg']);
     });
 
-    test('ComicInfo.xml is ignored as a page', () async {
+    test('accepts webp/gif/bmp and skips macOS junk entries', () async {
+      final file = buildArchive(sandbox, 'mixed.cbz', {
+        '__MACOSX/._01.webp': [0],
+        '._02.gif': [0],
+        '01.webp': [1],
+        '02.gif': [2],
+        '03.bmp': [3],
+      });
+
+      final result = await importFile(file);
+
+      expect(
+          pageFiles(result.imagesPath), ['0001.webp', '0002.gif', '0003.bmp']);
+      expect(firstBytesInOrder(result.imagesPath), [1, 2, 3]);
+    });
+
+    test('entry names with ../ cannot write outside the comic folder',
+        () async {
+      final file = buildArchive(sandbox, 'slip.cbz', {
+        '../../evil.jpg': [7],
+      });
+
+      final result = await importFile(file);
+
+      expect(pageFiles(result.imagesPath), ['0001.jpg']);
+      expect(File(p.join(appDocs.path, 'evil.jpg')).existsSync(), isFalse);
+      expect(File(p.join(sandbox.path, 'evil.jpg')).existsSync(), isFalse);
+    });
+
+    test('ComicInfo.xml is not a page', () async {
       final file = buildArchive(sandbox, 'm.cbz', {
         'ComicInfo.xml': comicInfoXml(manga: 'YesAndRightToLeft'),
         '01.jpg': fakeJpg,
       });
-      final result = await repo.addComic(
-          buildComicEntity(id: null, title: 'm.cbz', filePath: file.path));
+      final result = await importFile(file);
       expect(result.totalPages, 1);
-      expect(folderContents(), ['0001.jpg']);
+      expect(pageFiles(result.imagesPath), ['0001.jpg']);
     });
 
     for (final variant in <String, String?>{
       'YesAndRightToLeft': 'Manga',
       'Yes': 'Manga',
       'No': 'Comic',
+      'Unknown': null,
     }.entries) {
       test(
-        'ComicInfo.xml <Manga>${variant.key}</Manga> sets comicType '
-        '${variant.value}',
-        () async {
-          final file = buildArchive(sandbox, 'm.cbz', {
-            'ComicInfo.xml': comicInfoXml(
-                manga: variant.key, writer: 'Oda', genre: 'Shonen'),
-            '01.jpg': fakeJpg,
-          });
-          final result = await repo.addComic(
-              buildComicEntity(id: null, title: 'm.cbz', filePath: file.path));
-          expect(result.comicType, variant.value);
-          expect(result.author, 'Oda');
-          expect(result.genre, 'Shonen');
-        },
-        skip: 'MISSING FEATURE: ComicInfo.xml is never parsed (package:xml '
-            'is a dependency but unused). Manga/Writer/Genre/Series are not '
-            'imported, so the auto manga (RTL) mode only works if the user '
-            'picks "Manga" manually.',
-      );
+          'ComicInfo.xml <Manga>${variant.key}</Manga> sets comicType '
+          '${variant.value}', () async {
+        final file = buildArchive(sandbox, 'm.cbz', {
+          'ComicInfo.xml': comicInfoXml(
+              manga: variant.key,
+              writer: 'Oda',
+              genre: 'Shonen, Aventura',
+              series: 'One Piece'),
+          '01.jpg': fakeJpg,
+        });
+        final result = await importFile(file);
+        expect(result.comicType, variant.value);
+        expect(result.author, 'Oda');
+        expect(result.genre, 'Shonen');
+        expect(result.collection, 'One Piece');
+        expect(insertedModel().comicType, variant.value);
+      });
     }
 
-    test('current behaviour: ComicInfo metadata does not change comicType',
-        () async {
+    test('metadata given by the caller wins over ComicInfo.xml', () async {
       final file = buildArchive(sandbox, 'm.cbz', {
-        'ComicInfo.xml': comicInfoXml(manga: 'YesAndRightToLeft'),
+        'ComicInfo.xml': comicInfoXml(manga: 'No', writer: 'Oda'),
         '01.jpg': fakeJpg,
       });
-      final result = await repo.addComic(
-          buildComicEntity(id: null, title: 'm.cbz', filePath: file.path));
-      expect(result.comicType, isNull);
+      final result = await importFile(file,
+          comic: buildComicEntity(
+              id: null,
+              title: 'm.cbz',
+              filePath: file.path,
+              author: 'Toriyama',
+              comicType: 'Manga'));
+      expect(result.author, 'Toriyama');
+      expect(result.comicType, 'Manga');
     });
 
-    test('corrupt CBZ throws UnsupportedComicException and cleans up',
-        () async {
-      final file = writeRawFile(sandbox, 'bad.cbz',
-          List<int>.generate(512, (i) => (i * 37) % 256));
+    test('malformed ComicInfo.xml is ignored', () async {
+      final file = buildArchive(sandbox, 'm.cbz', {
+        'ComicInfo.xml': '<ComicInfo><Writer>Oda',
+        '01.jpg': fakeJpg,
+      });
+      final result = await importFile(file);
+      expect(result.totalPages, 1);
+      expect(result.author, isNull);
+    });
 
+    test('detects the format by content: a ZIP named .cbr imports', () async {
+      final zip = buildArchive(sandbox, 'tmp.zip', {'1.jpg': fakeJpg});
+      final file = zip.renameSync(p.join(sandbox.path, 'actually_zip.cbr'));
+      final result = await importFile(file);
+      expect(result.totalPages, 1);
+    });
+
+    Future<void> expectRejected(File file, {String? message}) async {
       await expectLater(
-        repo.addComic(
-            buildComicEntity(id: null, title: 'bad.cbz', filePath: file.path)),
-        // NOTE: archive 4.x ZipDecoder is lenient and returns an empty
-        // archive for random bytes, so the user sees "no contiene imágenes"
-        // instead of the "corrupto" message.
-        throwsA(isA<UnsupportedComicException>()),
+        importFile(file),
+        throwsA(isA<UnsupportedComicException>().having(
+            (e) => e.message, 'message', contains(message ?? ''))),
       );
-      verify(() => db.deleteComic(newId)).called(1);
-      expect(Directory(comicFolder()).existsSync(), isFalse);
+      verifyNever(() => db.addComic(any()));
+      expect(leftovers(), isEmpty);
+    }
+
+    test('random bytes are rejected as not a CBZ/CBR', () async {
+      await expectRejected(
+          writeRawFile(sandbox, 'bad.cbz',
+              List<int>.generate(512, (i) => (i * 37) % 256)),
+          message: 'no es un CBZ/CBR válido');
     });
 
-    test('truncated CBZ throws UnsupportedComicException and cleans up',
-        () async {
+    test('truncated CBZ is rejected and cleaned up', () async {
       final good = buildArchive(sandbox, 'good.cbz', {
         '1.jpg': List<int>.generate(4096, (i) => i % 251),
         '2.jpg': List<int>.generate(4096, (i) => i % 241),
       });
       final bytes = good.readAsBytesSync();
-      final file =
-          writeRawFile(sandbox, 'trunc.cbz', bytes.sublist(0, bytes.length ~/ 2));
-
-      await expectLater(
-        repo.addComic(buildComicEntity(
-            id: null, title: 'trunc.cbz', filePath: file.path)),
-        throwsA(isA<UnsupportedComicException>()),
-      );
-      verify(() => db.deleteComic(newId)).called(1);
-      expect(Directory(comicFolder()).existsSync(), isFalse);
+      await expectRejected(writeRawFile(
+          sandbox, 'trunc.cbz', bytes.sublist(0, bytes.length ~/ 2)));
     });
 
-    test('zero-byte CBZ throws UnsupportedComicException and cleans up',
+    test('zero-byte file is rejected', () async {
+      await expectRejected(writeRawFile(sandbox, 'empty.cbz', []));
+    });
+
+    test('CBZ without images is rejected with "no contiene imágenes"',
         () async {
-      final file = writeRawFile(sandbox, 'empty.cbz', []);
-      await expectLater(
-        repo.addComic(buildComicEntity(
-            id: null, title: 'empty.cbz', filePath: file.path)),
-        throwsA(isA<UnsupportedComicException>()),
-      );
-      verify(() => db.deleteComic(newId)).called(1);
-      expect(Directory(comicFolder()).existsSync(), isFalse);
+      await expectRejected(
+          buildArchive(sandbox, 'noimg.cbz', {
+            'ComicInfo.xml': comicInfoXml(title: 'x'),
+            'readme.txt': 'hi',
+          }),
+          message: 'no contiene imágenes');
     });
 
-    test('CBZ without images throws "no contiene imágenes" and cleans up',
-        () async {
-      final file = buildArchive(sandbox, 'noimg.cbz', {
-        'ComicInfo.xml': comicInfoXml(title: 'x'),
-        'readme.txt': 'hi',
-        'cover.gif': [1, 2],
-      });
-      await expectLater(
-        repo.addComic(buildComicEntity(
-            id: null, title: 'noimg.cbz', filePath: file.path)),
-        throwsA(isA<UnsupportedComicException>().having(
-            (e) => e.message, 'message', contains('no contiene imágenes'))),
-      );
-      verify(() => db.deleteComic(newId)).called(1);
-      expect(Directory(comicFolder()).existsSync(), isFalse);
-      verifyNever(() => db.updateComic(
-            id: any(named: 'id'),
-            imagesPath: any(named: 'imagesPath'),
-            picture: any(named: 'picture'),
-            totalPages: any(named: 'totalPages'),
-          ));
+    test('empty ZIP archive is rejected', () async {
+      await expectRejected(buildArchive(sandbox, 'void.cbz', {}));
     });
 
-    test('empty CBZ archive throws UnsupportedComicException', () async {
-      final file = buildArchive(sandbox, 'void.cbz', {});
-      await expectLater(
-        repo.addComic(buildComicEntity(
-            id: null, title: 'void.cbz', filePath: file.path)),
-        throwsA(isA<UnsupportedComicException>()),
-      );
-      verify(() => db.deleteComic(newId)).called(1);
+    test('missing source file is rejected', () async {
+      await expectRejected(File(p.join(sandbox.path, 'ghost.cbz')),
+          message: 'No se encontró');
     });
 
-    test('unsupported extension throws UnsupportedComicException', () async {
-      final file = buildArchive(sandbox, 'book.zip', {'1.jpg': fakeJpg});
-      await expectLater(
-        repo.addComic(buildComicEntity(
-            id: null, title: 'book.zip', filePath: file.path)),
-        throwsA(isA<UnsupportedComicException>()),
-      );
-      verify(() => db.deleteComic(newId)).called(1);
-      expect(Directory(comicFolder()).existsSync(), isFalse);
-    });
-
-    test(
-      'missing source file is rejected',
-      () async {
-        await expectLater(
-          repo.addComic(buildComicEntity(
-              id: null,
-              title: 'ghost.cbz',
-              filePath: p.join(sandbox.path, 'ghost.cbz'))),
-          throwsA(isA<UnsupportedComicException>()),
-        );
-        verify(() => db.deleteComic(newId)).called(1);
-      },
-      skip: 'BUG: _extractComicToFolder returns an empty list when the '
-          'archive does not exist, so addComic silently stores a comic with '
-          'totalPages=0 and no cover instead of failing.',
-    );
-
-    test('current behaviour: missing source file is stored with 0 pages',
-        () async {
-      final result = await repo.addComic(buildComicEntity(
-          id: null,
-          title: 'ghost.cbz',
-          filePath: p.join(sandbox.path, 'ghost.cbz')));
-      expect(result.totalPages, 0);
-      expect(result.picture, '');
-      verifyNever(() => db.deleteComic(any()));
-    });
-
-    test('rethrows non-Unsupported errors after cleanup', () async {
+    test('a DB failure removes the extracted folder and rethrows', () async {
       final file = buildArchive(sandbox, 'a.cbz', {'1.jpg': fakeJpg});
-      when(() => db.updateComic(
-            id: any(named: 'id'),
-            imagesPath: any(named: 'imagesPath'),
-            picture: any(named: 'picture'),
-            totalPages: any(named: 'totalPages'),
-          )).thenThrow(StateError('db down'));
+      when(() => db.addComic(any())).thenThrow(StateError('db down'));
 
-      await expectLater(
-        repo.addComic(
-            buildComicEntity(id: null, title: 'a.cbz', filePath: file.path)),
-        throwsA(isA<StateError>()),
-      );
-      verify(() => db.deleteComic(newId)).called(1);
-      expect(Directory(comicFolder()).existsSync(), isFalse);
+      await expectLater(importFile(file), throwsA(isA<StateError>()));
+      expect(leftovers(), isEmpty);
     });
 
     group('CBR (unrar platform channel mocked)', () {
-      test('copies extracted images (flattened) in natural order', () async {
-        final file = writeRawFile(sandbox, 'x.cbr', [0x52, 0x61, 0x72, 0x21]);
-        String? receivedSource;
+      final rarMagic = [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x00, 0x00];
+      final rar5Magic = [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x01, 0x00];
+
+      void onExtract(void Function(String dest) write) {
         messenger.setMockMethodCallHandler(unrarChannel, (call) async {
           expect(call.method, 'extractRAR');
-          final args = call.arguments as Map;
-          receivedSource = args['file_path'] as String;
-          final dest = args['destination_path'] as String;
-          Directory(p.join(dest, 'sub')).createSync(recursive: true);
-          File(p.join(dest, 'p10.jpg')).writeAsBytesSync([10]);
-          File(p.join(dest, 'p9.png')).writeAsBytesSync([9]);
-          File(p.join(dest, 'sub', 'p1.jpeg')).writeAsBytesSync([1]);
-          File(p.join(dest, 'info.xml')).writeAsStringSync('<x/>');
+          write((call.arguments as Map)['destination_path'] as String);
           return 'Extraction Success';
         });
+      }
 
-        final result = await repo.addComic(
-            buildComicEntity(id: null, title: 'x.cbr', filePath: file.path));
+      void put(String dest, String relative, List<int> bytes) =>
+          File(p.join(dest, relative))
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(bytes);
 
-        expect(receivedSource, file.path);
-        expect(result.totalPages, 3);
-        final folder = comicFolder();
-        final order = [
-          for (final n in folderContents())
-            File(p.join(folder, n)).readAsBytesSync().first
-        ];
-        expect(order, [1, 9, 10]);
-        expect(folderContents(), ['0001.jpeg', '0002.png', '0003.jpg']);
+      test('keeps chapter order and same-named pages in sub-folders',
+          () async {
+        final file = writeRawFile(sandbox, 'x.cbr', rarMagic);
+        onExtract((dest) {
+          put(dest, 'cap2/001.jpg', [21]);
+          put(dest, 'cap1/002.png', [12]);
+          put(dest, 'cap1/001.jpg', [11]);
+          put(dest, 'cap10/001.jpeg', [101]);
+          put(dest, 'info.txt', [0]);
+        });
+
+        final result = await importFile(file);
+
+        expect(result.totalPages, 4);
+        expect(firstBytesInOrder(result.imagesPath), [11, 12, 21, 101]);
+        expect(pageFiles(result.imagesPath),
+            ['0001.jpg', '0002.png', '0003.jpg', '0004.jpeg']);
       });
 
-      test('extraction failure -> UnsupportedComicException (RAR5) + cleanup',
+      test('reads ComicInfo.xml from the RAR', () async {
+        final file = writeRawFile(sandbox, 'x.cbr', rarMagic);
+        onExtract((dest) {
+          put(dest, '01.jpg', [1]);
+          File(p.join(dest, 'ComicInfo.xml'))
+              .writeAsStringSync(comicInfoXml(manga: 'YesAndRightToLeft'));
+        });
+        final result = await importFile(file);
+        expect(result.comicType, 'Manga');
+      });
+
+      test('extraction failure -> UnsupportedComicException mentioning CBR',
           () async {
-        final file = writeRawFile(sandbox, 'y.cbr', [1, 2, 3]);
         messenger.setMockMethodCallHandler(unrarChannel, (call) async {
           throw PlatformException(code: 'extractionError', message: 'boom');
         });
-
-        await expectLater(
-          repo.addComic(
-              buildComicEntity(id: null, title: 'y.cbr', filePath: file.path)),
-          throwsA(isA<UnsupportedComicException>()
-              .having((e) => e.message, 'message', contains('CBR'))),
-        );
-        verify(() => db.deleteComic(newId)).called(1);
-        expect(Directory(comicFolder()).existsSync(), isFalse);
+        await expectRejected(writeRawFile(sandbox, 'y.cbr', rarMagic),
+            message: 'CBR');
       });
 
-      test('RAR without images -> UnsupportedComicException', () async {
-        final file = writeRawFile(sandbox, 'z.cbr', [1]);
+      test('RAR5 failure explains that RAR5 is not supported', () async {
+        messenger.setMockMethodCallHandler(unrarChannel, (call) async {
+          throw PlatformException(code: 'extractionError', message: 'boom');
+        });
+        await expectRejected(writeRawFile(sandbox, 'y5.cbr', rar5Magic),
+            message: 'RAR5');
+      });
+
+      test('RAR without images -> "no contiene imágenes"', () async {
         messenger.setMockMethodCallHandler(
             unrarChannel, (call) async => 'Extraction Success');
-
-        await expectLater(
-          repo.addComic(
-              buildComicEntity(id: null, title: 'z.cbr', filePath: file.path)),
-          throwsA(isA<UnsupportedComicException>().having(
-              (e) => e.message, 'message', contains('no contiene imágenes'))),
-        );
+        await expectRejected(writeRawFile(sandbox, 'z.cbr', rarMagic),
+            message: 'no contiene imágenes');
       });
+    });
+  });
+
+  group('stored paths', () {
+    test('relative paths are resolved against the documents directory',
+        () async {
+      when(() => db.fetchAllComics()).thenAnswer((_) async => [
+            buildComicModel(
+                id: 1,
+                imagesPath: 'comics/c_1',
+                picture: 'comics/c_1/thumb/cover.jpg'),
+          ]);
+      final comic = (await repo.getAllComics()).single;
+      expect(comic.imagesPath, p.join(appDocs.path, 'comics', 'c_1'));
+      expect(comic.picture,
+          p.join(appDocs.path, 'comics', 'c_1', 'thumb', 'cover.jpg'));
+    });
+
+    test('legacy absolute paths and empty pictures are kept as-is', () async {
+      final legacy = p.join(appDocs.path, 'comics', '7');
+      when(() => db.getComicsByAuthor('Oda')).thenAnswer((_) async =>
+          [buildComicModel(id: 7, imagesPath: legacy, picture: '')]);
+      final comic = (await repo.getComicsByAuthor('Oda')).single;
+      expect(comic.imagesPath, legacy);
+      expect(comic.picture, '');
     });
   });
 

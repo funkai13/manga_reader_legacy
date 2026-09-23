@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -187,8 +187,8 @@ Widget _buildComicThumbnail(ComicEntity comic, bool isDark, double scale) {
   if (comic.picture.isNotEmpty) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8.r * scale),
-      child: Image.file(
-        File(comic.picture),
+      child: FileThumbnail(
+        comic.picture,
         width: width,
         height: height,
         fit: BoxFit.cover,

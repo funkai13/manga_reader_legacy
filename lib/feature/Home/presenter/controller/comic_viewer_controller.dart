@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:manga_reader/feature/Home/presenter/controller/comic_controller.dart';
 import 'package:path/path.dart' as p;
 
-class ComicViewerController extends AsyncNotifier<List<File>> {
-  static const _imageExtensions = {'.jpg', '.jpeg', '.png'};
+import '../../data/services/comic_archive_extractor.dart';
 
+class ComicViewerController extends AsyncNotifier<List<File>> {
   @override
   Future<List<File>> build() async => [];
 
@@ -22,7 +22,7 @@ class ComicViewerController extends AsyncNotifier<List<File>> {
           .list()
           .where((entity) =>
               entity is File &&
-              _imageExtensions.contains(p.extension(entity.path).toLowerCase()))
+              comicPageExtensions.contains(p.extension(entity.path).toLowerCase()))
           .cast<File>()
           .toList();
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:manga_reader/feature/Home/presenter/controller/comic_controller.dart';
 import 'package:manga_reader/feature/Home/presenter/helpers/comic_selectors.dart';
+import 'package:manga_reader/feature/Home/presenter/helpers/import_comic_flow.dart';
 import 'package:manga_reader/feature/Home/presenter/widgets/comics_carousel.dart';
 import 'package:manga_reader/feature/Library/presenter/screens/library_screen.dart';
 
@@ -56,11 +57,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         data: (comics) {
           if (comics.isEmpty) {
             return EmptyComicsScreen(
-              onAddComic: () async {
-                await ref
-                    .read(comicControllerProvider.notifier)
-                    .addComic(context);
-              },
+              onAddComic: () => importComicFlow(context, ref),
             );
           }
 
@@ -175,9 +172,7 @@ SliverAppBar _buildHomeAppBar(
         child: Consumer(
           builder: (ctx, ref, _) {
             return IconButton(
-              onPressed: () async => await ref
-                  .read(comicControllerProvider.notifier)
-                  .addComic(ctx),
+              onPressed: () => importComicFlow(ctx, ref),
               icon: Icon(
                 Icons.add,
                 size: 16.sp * scale,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -194,7 +196,7 @@ void main() {
     });
 
     testWidgets(
-        'valid file shows spinner, then metadata dialog, then saves metadata',
+        'valid file opens the metadata dialog right away and saves metadata',
         (tester) async {
       FilePicker.platform = FakeFilePicker(pickedFile('naruto_01.cbz'));
       final repo = createComicRepository(comics: sampleComics());
@@ -202,12 +204,6 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.add));
-      await tester.pump();
-      await tester.pump();
-      // Spinner dialog is shown for at least 500ms.
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-      await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
 
       expect(find.byType(ComicMetadataDialog), findsOneWidget);
@@ -228,12 +224,54 @@ void main() {
             id: 99,
             title: 'naruto_01.cbz',
             author: 'Kishimoto',
-            genre: '',
-            collection: '',
+            // Empty fields keep what ComicInfo.xml provided.
+            genre: null,
+            collection: null,
             comicType: null,
           )).called(1);
       // Initial load + refresh after adding.
       verify(() => repo.getAllComics()).called(2);
+    });
+
+    testWidgets('saving before extraction ends shows a spinner until done',
+        (tester) async {
+      FilePicker.platform = FakeFilePicker(pickedFile('big.cbz'));
+      final repo = createComicRepository(comics: sampleComics());
+      final extraction = Completer<ComicEntity>();
+      when(() => repo.addComic(any())).thenAnswer((_) => extraction.future);
+      await pumpHome(tester, repo: repo);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guardar'));
+      // The spinner animates forever, so pumpAndSettle can't be used here.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(ComicMetadataDialog), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      verifyNever(() => repo.updateComicMetadata(
+            id: any(named: 'id'),
+            title: any(named: 'title'),
+            author: any(named: 'author'),
+            genre: any(named: 'genre'),
+            collection: any(named: 'collection'),
+            comicType: any(named: 'comicType'),
+          ));
+
+      extraction.complete(sampleComics().first.copyWith(id: 77));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      verify(() => repo.updateComicMetadata(
+            id: 77,
+            title: 'big.cbz',
+            author: null,
+            genre: null,
+            collection: null,
+            comicType: null,
+          )).called(1);
     });
 
     testWidgets('skipping metadata does not update it', (tester) async {
@@ -305,7 +343,7 @@ void main() {
     group(
       'fast failures',
       () {
-        testWidgets('failing within the 500ms spinner window shows a snackbar',
+        testWidgets('failing before the dialog is filled shows a snackbar',
             (tester) async {
           FilePicker.platform = FakeFilePicker(pickedFile('broken.cbr'));
           final repo = createComicRepository(comics: sampleComics());
@@ -342,11 +380,6 @@ void main() {
               findsOneWidget);
         });
       },
-      skip: 'BUG: ComicController.addComic no escucha processingFuture hasta '
-          'pasados 500ms; si repository.addComic falla antes, el error queda '
-          'como excepción asíncrona no manejada. Además, si falla antes del '
-          'primer frame del spinner, onError llama Navigator.maybePop() sobre '
-          'una ruta sin montar (assert "scope != null" en ModalRoute.willPop).',
     );
 
     testWidgets('"Agregar Comic" on the empty screen opens the picker',

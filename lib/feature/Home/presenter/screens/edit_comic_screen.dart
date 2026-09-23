@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -94,10 +94,8 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
                 children: [
                   // Blurred Background
                   if (widget.comic.picture.isNotEmpty)
-                    Image.file(
-                      File(widget.comic.picture),
-                      fit: BoxFit.cover,
-                    )
+                    // Blurred anyway, so a small decode is enough.
+                    FileThumbnail(widget.comic.picture, width: 120)
                   else
                     Container(
                       color: isDark
@@ -129,10 +127,7 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12.r * scale),
                         child: widget.comic.picture.isNotEmpty
-                            ? Image.file(
-                                File(widget.comic.picture),
-                                fit: BoxFit.cover,
-                              )
+                            ? FileThumbnail(widget.comic.picture)
                             : Container(
                                 color: Colors.grey,
                                 child: const Icon(Icons.book, size: 50),

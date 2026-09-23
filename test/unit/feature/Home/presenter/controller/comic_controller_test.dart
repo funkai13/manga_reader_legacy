@@ -224,4 +224,93 @@ void main() {
       expect(state().value, comics);
     });
   });
+
+  group('import', () {
+    void stubMetadata() => when(() => repo.updateComicMetadata(
+          id: any(named: 'id'),
+          title: any(named: 'title'),
+          author: any(named: 'author'),
+          genre: any(named: 'genre'),
+          collection: any(named: 'collection'),
+          comicType: any(named: 'comicType'),
+        )).thenAnswer((_) async {});
+
+    test('isSupportedArchive accepts .cbz/.cbr in any case', () {
+      expect(ComicController.isSupportedArchive('a.cbz'), isTrue);
+      expect(ComicController.isSupportedArchive('B.CBR'), isTrue);
+      expect(ComicController.isSupportedArchive('c.zip'), isFalse);
+      expect(ComicController.isSupportedArchive('cbz'), isFalse);
+    });
+
+    test('isAlreadyImported checks title, then file name', () async {
+      when(() => repo.getComicByTitle(any())).thenAnswer((_) async => null);
+      when(() => repo.getComicByFilenameMatch(any()))
+          .thenAnswer((_) async => null);
+      expect(await notifier().isAlreadyImported('x.cbz'), isFalse);
+
+      when(() => repo.getComicByFilenameMatch('x.cbz'))
+          .thenAnswer((_) async => comics.first);
+      expect(await notifier().isAlreadyImported('x.cbz'), isTrue);
+    });
+
+    test('importComic sends a fresh entity and does not touch state',
+        () async {
+      await loaded();
+      when(() => repo.addComic(any()))
+          .thenAnswer((_) async => comics.first.copyWith(id: 9));
+
+      final created = await notifier().importComic('/tmp/a.cbz', 'a.cbz');
+
+      expect(created.id, 9);
+      final sent =
+          verify(() => repo.addComic(captureAny())).captured.single as ComicEntity;
+      expect(sent.id, isNull);
+      expect(sent.title, 'a.cbz');
+      expect(sent.filePath, '/tmp/a.cbz');
+      expect(sent.comicType, isNull);
+      expect(sent.currentReadPage, 0);
+      verify(() => repo.getAllComics()).called(1); // only the initial build
+    });
+
+    test('finishImport applies trimmed metadata, empty fields as null',
+        () async {
+      await loaded();
+      stubMetadata();
+
+      await notifier().finishImport(comics.first, {
+        'title': ' Naruto ',
+        'author': '',
+        'genre': '  ',
+        'collection': 'Naruto',
+        'comicType': 'Manga',
+      });
+
+      verify(() => repo.updateComicMetadata(
+            id: 1,
+            title: 'Naruto',
+            author: null,
+            genre: null,
+            collection: 'Naruto',
+            comicType: 'Manga',
+          )).called(1);
+    });
+
+    test('finishImport without metadata only refreshes the list', () async {
+      await loaded();
+      final added = [...comics, buildComicEntity(id: 3, title: 'C')];
+      when(() => repo.getAllComics()).thenAnswer((_) async => added);
+
+      await notifier().finishImport(comics.first, null);
+
+      verifyNever(() => repo.updateComicMetadata(
+            id: any(named: 'id'),
+            title: any(named: 'title'),
+            author: any(named: 'author'),
+            genre: any(named: 'genre'),
+            collection: any(named: 'collection'),
+            comicType: any(named: 'comicType'),
+          ));
+      expect(state().value!.map((c) => c.title), ['A', 'B', 'C']);
+    });
+  });
 }

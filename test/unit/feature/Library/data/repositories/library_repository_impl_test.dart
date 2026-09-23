@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:manga_reader/feature/Home/data/services/comic_storage.dart';
 import 'package:manga_reader/feature/Library/data/repositories/library_repository_impl.dart';
 import 'package:manga_reader/feature/Library/domain/entities/category_entity.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../../helpers/mocks.dart';
 
@@ -17,6 +21,18 @@ void main() {
   setUp(() {
     db = MockComicDatabase();
     repo = LibraryRepositoryImpl(db);
+  });
+
+  test('relative cover paths are resolved against the documents dir',
+      () async {
+    final repo = LibraryRepositoryImpl(db,
+        storage: ComicStorage(
+            documentsDirectory: () async => Directory('/docs')));
+    when(() => db.getAuthorsWithCount()).thenAnswer((_) async => [
+          {'name': 'Oda', 'count': 1, 'coverPath': 'comics/c_1/thumb/cover.jpg'},
+        ]);
+    expect((await repo.getAuthors()).single.coverPath,
+        p.join('/docs', 'comics', 'c_1', 'thumb', 'cover.jpg'));
   });
 
   group('get categories maps rows to CategoryEntity with the right type', () {

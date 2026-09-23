@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -40,9 +40,9 @@ class ComicCard extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (comic.picture.isNotEmpty)
-                Image.file(
-                  File(comic.picture),
-                  fit: BoxFit.fill,
+                FileThumbnail(
+                  comic.picture,
+                  fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return _buildPlaceholder(isDark);
                   },
