@@ -21,7 +21,12 @@ class ComicModel extends ComicEntity {
       super.author,
       super.genre,
       super.collection,
-      super.comicType});
+      super.comicType,
+      this.contentHash});
+
+  /// Fingerprint of the archive the comic was imported from. Only stored in
+  /// the DB (duplicate detection); not part of [ComicEntity].
+  final String? contentHash;
 
   Map<String, dynamic> toMap() {
     return {
@@ -43,6 +48,7 @@ class ComicModel extends ComicEntity {
       ComicFields.genre: genre,
       ComicFields.collection: collection,
       ComicFields.comicType: comicType,
+      ComicFields.contentHash: contentHash,
     };
   }
 
@@ -72,10 +78,10 @@ class ComicModel extends ComicEntity {
         filePath: map[ComicFields.filePath] as String,
         title: map[ComicFields.title] as String,
         picture: map[ComicFields.picture] as String? ?? '',
-        currentReadPage: map[ComicFields.currentPage] as int,
-        totalPages: map[ComicFields.totalPages] as int,
+        currentReadPage: map[ComicFields.currentPage] as int? ?? 0,
+        totalPages: map[ComicFields.totalPages] as int? ?? 0,
         lastOpened: map[ComicFields.lastOpened] as String? ?? '',
-        currentReading: map[ComicFields.currentReading] as int,
+        currentReading: map[ComicFields.currentReading] as int? ?? 0,
         imagesPath: map[ComicFields.imagesPath] as String,
         isFavorite: intToBool(map[ComicFields.isFavorite]),
         isReading: intToBool(map[ComicFields.isReading]),
@@ -85,6 +91,7 @@ class ComicModel extends ComicEntity {
         author: map[ComicFields.author] as String?,
         genre: map[ComicFields.genre] as String?,
         collection: map[ComicFields.collection] as String?,
-        comicType: map[ComicFields.comicType] as String?);
+        comicType: map[ComicFields.comicType] as String?,
+        contentHash: map[ComicFields.contentHash] as String?);
   }
 }

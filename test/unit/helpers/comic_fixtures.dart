@@ -65,6 +65,7 @@ ComicModel buildComicModel({
   String? genre,
   String? collection,
   String? comicType,
+  String? contentHash,
 }) {
   return ComicModel(
     id: id,
@@ -85,6 +86,7 @@ ComicModel buildComicModel({
     genre: genre,
     collection: collection,
     comicType: comicType,
+    contentHash: contentHash,
   );
 }
 

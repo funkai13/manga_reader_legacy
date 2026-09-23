@@ -65,10 +65,10 @@ void main() {
     deleteQuietly(dbDir);
   });
 
-  test('upgrades a v1 database to v3 keeping rows and normalizing booleans',
+  test('upgrades a v1 database to the latest version keeping rows and normalizing booleans',
       () async {
     final database = await ComicDatabase.instance.database;
-    expect(await database.getVersion(), 3);
+    expect(await database.getVersion(), ComicDatabase.schemaVersion);
 
     final cols = (await database.rawQuery('PRAGMA table_info(comics)'))
         .map((c) => c['name'])
@@ -80,9 +80,12 @@ void main() {
           ComicFields.genre,
           ComicFields.collection,
           ComicFields.comicType,
+          ComicFields.contentHash,
         ]));
 
-    final comics = await ComicDatabase.instance.fetchAllComics();
+    // fetchAllComics is newest first; check in insertion order.
+    final comics =
+        (await ComicDatabase.instance.fetchAllComics()).reversed.toList();
     expect(comics.map((c) => c.title), ['a', 'b', 'c']);
 
     final a = comics[0];

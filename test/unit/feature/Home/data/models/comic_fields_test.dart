@@ -26,6 +26,7 @@ void main() {
       expect(ComicFields.genre, 'genre');
       expect(ComicFields.collection, 'collection');
       expect(ComicFields.comicType, 'comicType');
+      expect(ComicFields.contentHash, 'contentHash');
     });
 
     test('column names are unique', () {
@@ -48,6 +49,7 @@ void main() {
         ComicFields.genre,
         ComicFields.collection,
         ComicFields.comicType,
+        ComicFields.contentHash,
       ];
       expect(names.toSet().length, names.length);
     });

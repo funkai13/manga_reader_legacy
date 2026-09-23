@@ -26,4 +26,8 @@ class ComicFields {
   static const genre = 'genre';
   static const collection = 'collection';
   static const comicType = 'comicType';
+
+  /// Fingerprint of the source archive (see ComicFingerprint); NULL for
+  /// rows imported before schema v4.
+  static const contentHash = 'contentHash';
 }

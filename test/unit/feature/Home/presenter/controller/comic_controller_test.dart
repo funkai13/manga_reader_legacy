@@ -262,15 +262,15 @@ void main() {
       expect(ComicController.isSupportedArchive('cbz'), isFalse);
     });
 
-    test('isAlreadyImported checks title, then file name', () async {
-      when(() => repo.getComicByTitle(any())).thenAnswer((_) async => null);
-      when(() => repo.getComicByFilenameMatch(any()))
-          .thenAnswer((_) async => null);
-      expect(await notifier().isAlreadyImported('x.cbz'), isFalse);
+    test('isAlreadyImported looks the file path up by content', () async {
+      when(() => repo.findDuplicate(any())).thenAnswer((_) async => null);
+      expect(await notifier().isAlreadyImported('/picked/x.cbz'), isFalse);
 
-      when(() => repo.getComicByFilenameMatch('x.cbz'))
+      when(() => repo.findDuplicate('/picked/x.cbz'))
           .thenAnswer((_) async => comics.first);
-      expect(await notifier().isAlreadyImported('x.cbz'), isTrue);
+      expect(await notifier().isAlreadyImported('/picked/x.cbz'), isTrue);
+      // The title is no longer used to detect duplicates.
+      verifyNever(() => repo.getComicByTitle(any()));
     });
 
     test('importComic sends a fresh entity and does not touch state',

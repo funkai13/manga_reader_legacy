@@ -125,7 +125,7 @@ MockComicRepository createComicRepository({
       (_) => getAll != null ? getAll() : Future.value(List.of(comics)));
   when(() => repo.getComicByTitle(any())).thenAnswer((_) async => null);
   when(() => repo.getComicByPath(any())).thenAnswer((_) async => null);
-  when(() => repo.getComicByFilenameMatch(any())).thenAnswer((_) async => null);
+  when(() => repo.findDuplicate(any())).thenAnswer((_) async => null);
   when(() => repo.addBookMark(any(), any())).thenAnswer((_) async {});
   when(() => repo.startReadingComic(any())).thenAnswer((_) async {});
   when(() => repo.markCompleted(any())).thenAnswer((_) async {});

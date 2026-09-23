@@ -1,22 +1,29 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:sqflite/sqflite.dart' show DatabaseException;
+
 import '../../domain/entity/comic.dart';
+import '../../domain/exceptions/comic_exceptions.dart';
 import '../../domain/repositories/comic_repository.dart';
 import '../datasources/comic_database.dart';
 import '../models/comic_fields.dart';
 import '../models/comic_model.dart';
 import '../services/comic_archive_extractor.dart';
+import '../services/comic_fingerprint.dart';
 import '../services/comic_storage.dart';
 
 class ComicRepositoryImpl implements ComicRepository {
   final ComicDatabase datasource;
   final ComicStorage storage;
   final ComicArchiveExtractor extractor;
+  final ComicFingerprint fingerprint;
 
   ComicRepositoryImpl(
     this.datasource, {
     ComicStorage? storage,
     this.extractor = const ComicArchiveExtractor(),
+    this.fingerprint = const ComicFingerprint(),
   }) : storage = storage ?? ComicStorage();
 
   /// Maps a DB row to an entity with paths resolved for this device.
@@ -55,17 +62,32 @@ class ComicRepositoryImpl implements ComicRepository {
   Future<ComicEntity?> getComicByTitle(String title) async =>
       _toEntityOrNull(await datasource.getComicByTitle(title));
 
+  /// Looks the file up by content. Rows imported before schema v4 have no
+  /// hash and are never reported: matching them by name gave false
+  /// positives for different comics that share a file name.
   @override
-  Future<ComicEntity?> getComicByFilenameMatch(String filename) async =>
-      _toEntityOrNull(await datasource.getComicByFilenameMatch(filename));
+  Future<ComicEntity?> findDuplicate(String filePath) async {
+    final hash = await fingerprint.tryOf(filePath);
+    if (hash == null) return null;
+    return _toEntityOrNull(await datasource.getComicByContentHash(hash));
+  }
 
   /// Extracts the archive first and inserts the row only once the pages are
   /// on disk, so a crash or a bad file never leaves a comic without images.
   /// Metadata the caller didn't provide is taken from ComicInfo.xml.
+  ///
+  /// Throws [DuplicateComicException] when the same content (by
+  /// [ComicFingerprint]) was already imported, whatever the file names.
   @override
   Future<ComicEntity> addComic(ComicEntity comic) async {
-    final existingComic = await datasource.getComicByTitle(comic.title);
-    if (existingComic != null) return _toEntity(existingComic);
+    // An unreadable file yields no hash; the extractor then reports it.
+    final contentHash = await fingerprint.tryOf(comic.filePath);
+    if (contentHash != null) {
+      final existing = await datasource.getComicByContentHash(contentHash);
+      if (existing != null) {
+        throw DuplicateComicException(existingId: existing.id);
+      }
+    }
 
     final folder = await storage.newComicFolder();
     try {
@@ -92,9 +114,21 @@ class ComicRepositoryImpl implements ComicRepository {
         genre: _orNull(comic.genre) ?? info?.genre,
         collection: _orNull(comic.collection) ?? info?.series,
         comicType: comic.comicType ?? info?.comicType,
+        contentHash: contentHash,
       );
 
-      final newId = await datasource.addComic(model);
+      final int newId;
+      try {
+        newId = await datasource.addComic(model);
+      } on DatabaseException catch (e) {
+        // Lost a race with a concurrent import of the same file.
+        if (contentHash != null &&
+            e.isUniqueConstraintError(
+                '${ComicFields.tableName}.${ComicFields.contentHash}')) {
+          throw DuplicateComicException();
+        }
+        rethrow;
+      }
       return await _toEntity(
           ComicModel.fromMap({...model.toMap(), ComicFields.id: newId}));
     } catch (_) {
@@ -126,9 +160,19 @@ class ComicRepositoryImpl implements ComicRepository {
     await datasource.updateComic(id: id, isCompleted: true);
   }
 
+  /// Removes the row, then the extracted pages. A folder that can't be
+  /// deleted is only logged: the comic is already gone from the library.
   @override
-  Future<void> deleteComic(int id) {
-    return datasource.deleteComic(id);
+  Future<void> deleteComic(int id) async {
+    final comic = await datasource.getComicById(id);
+    await datasource.deleteComic(id);
+    if (comic == null) return;
+    try {
+      await storage.deleteComicFolder(comic.imagesPath);
+    } on FileSystemException catch (e) {
+      developer.log('Could not delete images of comic $id: $e',
+          name: 'ComicRepository');
+    }
   }
 
   @override

@@ -50,7 +50,7 @@ final class LibraryControllerProvider
   }
 }
 
-String _$libraryControllerHash() => r'b9ed339d1fb0941b75576c920d191c7fcdf311d0';
+String _$libraryControllerHash() => r'c96d3a0c7a5729c0bec319de9cda0dd1e55858f7';
 
 final class LibraryControllerFamily extends $Family
     with

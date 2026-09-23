@@ -169,7 +169,8 @@ void main() {
         (tester) async {
       FilePicker.platform = FakeFilePicker(pickedFile('akira.cbz'));
       final repo = createComicRepository(comics: sampleComics());
-      when(() => repo.getComicByTitle('akira.cbz'))
+      // Checked by content, with the picked file's path.
+      when(() => repo.findDuplicate('/fake/akira.cbz'))
           .thenAnswer((_) async => sampleComics()[2]);
       await pumpHome(tester, repo: repo);
       await tester.pumpAndSettle();
@@ -181,18 +182,22 @@ void main() {
       verifyNever(() => repo.addComic(any()));
     });
 
-    testWidgets('detects duplicates by file name match', (tester) async {
+    testWidgets(
+        'shows the duplicate message when the import itself finds the '
+        'same content', (tester) async {
       FilePicker.platform = FakeFilePicker(pickedFile('renamed.cbr'));
       final repo = createComicRepository(comics: sampleComics());
-      when(() => repo.getComicByFilenameMatch('renamed.cbr'))
-          .thenAnswer((_) async => sampleComics()[0]);
+      when(() => repo.addComic(any()))
+          .thenAnswer((_) async => throw DuplicateComicException(existingId: 1));
       await pumpHome(tester, repo: repo);
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
 
+      expect(find.byType(ComicMetadataDialog), findsNothing);
       expect(find.text('Este cómic ya está en tu biblioteca.'), findsOneWidget);
+      expect(find.text('Ocurrió un error al agregar el cómic.'), findsNothing);
     });
 
     testWidgets(

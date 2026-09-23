@@ -19,12 +19,28 @@ class ComicStorage {
   Future<String> get documentsPath =>
       _documentsPath ??= _documentsDirectory().then((d) => d.path);
 
+  /// Folder under which every imported comic gets its own sub-folder.
+  Future<String> get comicsRoot async => p.join(await documentsPath, 'comics');
+
   /// Returns a new, not yet created, folder for a comic being imported.
   Future<String> newComicFolder() async => p.join(
-        await documentsPath,
-        'comics',
+        await comicsRoot,
         'c_${DateTime.now().microsecondsSinceEpoch}',
       );
+
+  /// Deletes the images folder of a comic ([storedPath] as kept in the DB).
+  ///
+  /// Only folders inside [comicsRoot] are removed, so a bogus or legacy path
+  /// can never wipe anything else. Returns whether something was deleted.
+  Future<bool> deleteComicFolder(String storedPath) async {
+    if (storedPath.isEmpty) return false;
+    final folder = p.normalize(await resolve(storedPath));
+    if (!p.isWithin(await comicsRoot, folder)) return false;
+    final dir = Directory(folder);
+    if (!await dir.exists()) return false;
+    await dir.delete(recursive: true);
+    return true;
+  }
 
   /// Converts an absolute path under the documents directory to the portable
   /// form stored in the DB (relative, always with '/').

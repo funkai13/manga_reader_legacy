@@ -29,10 +29,8 @@ Future<void> importComicFlow(BuildContext context, WidgetRef ref) async {
       ));
       return;
     }
-    if (await notifier.isAlreadyImported(file.name)) {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Este cómic ya está en tu biblioteca.'),
-      ));
+    if (await notifier.isAlreadyImported(filePath)) {
+      messenger.showSnackBar(_alreadyInLibrary);
       return;
     }
     if (!context.mounted) return;
@@ -59,6 +57,9 @@ Future<void> importComicFlow(BuildContext context, WidgetRef ref) async {
         ? await processing
         : await _whileShowingSpinner(navigator, processing);
     await notifier.finishImport(created, metadata);
+  } on DuplicateComicException {
+    // Same content imported meanwhile (e.g. picked twice in a row).
+    messenger.showSnackBar(_alreadyInLibrary);
   } on UnsupportedComicException catch (e) {
     messenger.showSnackBar(SnackBar(
       content: Text(
@@ -75,6 +76,10 @@ Future<void> importComicFlow(BuildContext context, WidgetRef ref) async {
     unawaited(_clearPickerCache());
   }
 }
+
+const _alreadyInLibrary = SnackBar(
+  content: Text('Este cómic ya está en tu biblioteca.'),
+);
 
 Future<T> _whileShowingSpinner<T>(NavigatorState navigator, Future<T> work) {
   showDialog<void>(

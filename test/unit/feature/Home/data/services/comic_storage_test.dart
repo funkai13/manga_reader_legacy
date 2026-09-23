@@ -58,4 +58,53 @@ void main() {
     await storage.newComicFolder();
     expect(calls, 1);
   });
+
+  group('deleteComicFolder', () {
+    late Directory tmpDocs;
+    late ComicStorage real;
+
+    setUp(() {
+      tmpDocs = Directory.systemTemp.createTempSync('storage_docs_');
+      real = ComicStorage(documentsDirectory: () async => tmpDocs);
+    });
+
+    tearDown(() {
+      if (tmpDocs.existsSync()) tmpDocs.deleteSync(recursive: true);
+    });
+
+    Directory makeDir(List<String> parts) =>
+        Directory(p.joinAll([tmpDocs.path, ...parts]))
+          ..createSync(recursive: true);
+
+    test('deletes a relative (stored) comic folder recursively', () async {
+      final dir = makeDir(['comics', 'c_1', 'thumb']);
+      File(p.join(dir.path, 'cover.jpg')).writeAsBytesSync([1]);
+
+      expect(await real.deleteComicFolder('comics/c_1'), isTrue);
+      expect(Directory(p.join(tmpDocs.path, 'comics', 'c_1')).existsSync(),
+          isFalse);
+      expect(Directory(p.join(tmpDocs.path, 'comics')).existsSync(), isTrue);
+    });
+
+    test('deletes a legacy absolute folder under comics/', () async {
+      final dir = makeDir(['comics', '7']);
+      expect(await real.deleteComicFolder(dir.path), isTrue);
+      expect(dir.existsSync(), isFalse);
+    });
+
+    test('never deletes outside documents/comics', () async {
+      final other = makeDir(['other']);
+      final comics = makeDir(['comics']);
+      expect(await real.deleteComicFolder(other.path), isFalse);
+      expect(await real.deleteComicFolder('comics'), isFalse);
+      expect(await real.deleteComicFolder('comics/../other'), isFalse);
+      expect(await real.deleteComicFolder(''), isFalse);
+      expect(other.existsSync(), isTrue);
+      expect(comics.existsSync(), isTrue);
+    });
+
+    test('missing folder -> false, no error', () async {
+      expect(await real.deleteComicFolder('comics/c_404'), isFalse);
+    });
+  });
 }

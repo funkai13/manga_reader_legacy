@@ -4,7 +4,10 @@ import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Home/domain/provider/comic_provider.dart';
 import 'package:manga_reader/feature/Library/presenter/widgets/comic_grid_widget.dart';
 
-final filteredComicsProvider = FutureProvider.family<List<ComicEntity>, ({String type, String value})>((ref, arg) async {
+/// Comics of one category. autoDispose so a list reopened later (e.g. after
+/// a rename) is always read fresh from the DB.
+final filteredComicsProvider = FutureProvider.autoDispose
+    .family<List<ComicEntity>, ({String type, String value})>((ref, arg) async {
   final repository = ref.read(comicRepositoryProvider);
   switch (arg.type) {
     case 'author':

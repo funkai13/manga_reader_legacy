@@ -2,15 +2,19 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:manga_reader/feature/Home/presenter/controller/comic_controller.dart';
 import 'package:manga_reader/feature/Library/domain/entities/category_entity.dart';
 import 'package:manga_reader/feature/Library/presenter/controller/library_controller.dart';
+import 'package:manga_reader/feature/Library/presenter/screens/filtered_comics_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/comic_fixtures.dart';
 import '../../../../helpers/mocks.dart';
 import '../../../../helpers/riverpod_utils.dart';
 
 void main() {
   late MockLibraryRepository repo;
+  late MockComicRepository comicRepo;
   late ProviderContainer container;
 
   final authors = [CategoryEntity(name: 'Oda', count: 2, type: 'author')];
@@ -27,7 +31,12 @@ void main() {
     when(() => repo.renameAuthor(any(), any())).thenAnswer((_) async {});
     when(() => repo.renameGenre(any(), any())).thenAnswer((_) async {});
     when(() => repo.renameCollection(any(), any())).thenAnswer((_) async {});
-    container = createContainer(libraryRepository: repo);
+    comicRepo = MockComicRepository();
+    when(() => comicRepo.getAllComics()).thenAnswer((_) async => []);
+    when(() => comicRepo.getComicsByAuthor(any()))
+        .thenAnswer((_) async => [buildComicEntity(id: 1)]);
+    container =
+        createContainer(libraryRepository: repo, comicRepository: comicRepo);
   });
 
   /// The provider is autoDispose: keep it alive during the test.
@@ -82,6 +91,18 @@ void main() {
     });
   });
 
+  group('filteredComicsProvider', () {
+    test('is autoDispose: re-fetched once nobody listens', () async {
+      const filter = (type: 'author', value: 'Oda');
+      final sub = container.listen(filteredComicsProvider(filter), (_, __) {});
+      expect(await container.read(filteredComicsProvider(filter).future),
+          hasLength(1));
+      sub.close();
+      await container.pump();
+      expect(container.exists(filteredComicsProvider(filter)), isFalse);
+    });
+  });
+
   group('renameCategory', () {
     test('author: renames and reloads', () async {
       await load('author');
@@ -119,6 +140,44 @@ void main() {
       verifyNever(() => repo.renameCollection(any(), any()));
       await container.read(libraryControllerProvider('author').future);
       verify(() => repo.getAuthors()).called(2);
+    });
+
+    test('refreshes Home and the filtered lists after renaming', () async {
+      await load('author');
+      container.listen(comicControllerProvider, (_, __) {});
+      await container.read(comicControllerProvider.future);
+      const filter = (type: 'author', value: 'Oda');
+      container.listen(filteredComicsProvider(filter), (_, __) {});
+      await container.read(filteredComicsProvider(filter).future);
+
+      await container
+          .read(libraryControllerProvider('author').notifier)
+          .renameCategory('Oda', 'E. Oda', 'author');
+      await container.read(comicControllerProvider.future);
+      await container.read(filteredComicsProvider(filter).future);
+
+      verify(() => comicRepo.getAllComics()).called(2);
+      verify(() => comicRepo.getComicsByAuthor('Oda')).called(2);
+    });
+
+    test('does not touch a disposed notifier after the rename finishes',
+        () async {
+      final sub =
+          container.listen(libraryControllerProvider('author'), (_, __) {});
+      await container.read(libraryControllerProvider('author').future);
+      final renaming = Completer<void>();
+      when(() => repo.renameAuthor(any(), any()))
+          .thenAnswer((_) => renaming.future);
+
+      final future = container
+          .read(libraryControllerProvider('author').notifier)
+          .renameCategory('Oda', 'E. Oda', 'author');
+      sub.close(); // e.g. the user left the screen
+      await container.pump();
+      renaming.complete();
+
+      await expectLater(future, completes);
+      verify(() => repo.renameAuthor('Oda', 'E. Oda')).called(1);
     });
 
     test('rethrows repository errors', () async {

@@ -32,6 +32,7 @@ void main() {
           genre: 'G',
           collection: 'C',
           comicType: 'Manga',
+          contentHash: 'h',
         );
 
         expect(model.toMap(), {
@@ -53,6 +54,7 @@ void main() {
           ComicFields.genre: 'G',
           ComicFields.collection: 'C',
           ComicFields.comicType: 'Manga',
+          ComicFields.contentHash: 'h',
         });
       });
 
@@ -191,9 +193,23 @@ void main() {
         expect(() => ComicModel.fromMap(row), throwsA(isA<TypeError>()));
       });
 
-      test('throws when a required int column is null', () {
-        final row = buildComicRow()..[ComicFields.totalPages] = null;
-        expect(() => ComicModel.fromMap(row), throwsA(isA<TypeError>()));
+      test('NULL int columns default to 0', () {
+        final row = buildComicRow()
+          ..[ComicFields.totalPages] = null
+          ..[ComicFields.currentPage] = null
+          ..[ComicFields.currentReading] = null;
+        final model = ComicModel.fromMap(row);
+        expect(model.totalPages, 0);
+        expect(model.currentReadPage, 0);
+        expect(model.currentReading, 0);
+      });
+
+      test('contentHash is optional (legacy rows) and roundtrips', () {
+        expect(ComicModel.fromMap(buildComicRow()).contentHash, isNull);
+        final row = buildComicRow()..[ComicFields.contentHash] = 'abc';
+        final model = ComicModel.fromMap(row);
+        expect(model.contentHash, 'abc');
+        expect(model.toMap()[ComicFields.contentHash], 'abc');
       });
 
       test('throws when imagesPath is null', () {

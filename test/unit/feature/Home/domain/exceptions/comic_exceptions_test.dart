@@ -24,4 +24,14 @@ void main() {
       );
     });
   });
+
+  group('DuplicateComicException', () {
+    test('keeps the existing id and is an Exception', () {
+      final e = DuplicateComicException(existingId: 7);
+      expect(e.existingId, 7);
+      expect(e, isA<Exception>());
+      expect(e.toString(), 'DuplicateComicException: existingId=7');
+      expect(DuplicateComicException().existingId, isNull);
+    });
+  });
 }
