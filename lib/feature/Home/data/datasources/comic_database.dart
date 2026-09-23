@@ -56,32 +56,28 @@ class ComicDatabase {
   Future<void> _upgradeDatabase(
       Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      try {
-        await db.execute('''
-          UPDATE ${ComicFields.tableName}
-          SET ${ComicFields.isReading} = CASE 
-            WHEN ${ComicFields.isReading} = '1' OR ${ComicFields.isReading} = 'true' THEN 1 
-            ELSE 0 
-          END
-        ''');
+      // The v1 schema changed several times without a version bump: early
+      // builds used `id` instead of `_id` and had no imagesPath or flag
+      // columns. Copy whatever columns exist and default the rest.
+      final columns =
+          (await db.rawQuery('PRAGMA table_info(${ComicFields.tableName})'))
+              .map((c) => c['name'] as String)
+              .toSet();
+      String orDefault(String column, String fallback) =>
+          columns.contains(column) ? 'COALESCE($column, $fallback)' : fallback;
+      String flag(String column) => columns.contains(column)
+          ? "CASE WHEN $column = 'true' OR CAST($column AS INTEGER) > 0 "
+              'THEN 1 ELSE 0 END'
+          : '0';
+      final idColumn = columns.contains(ComicFields.id)
+          ? ComicFields.id
+          : columns.contains('id')
+              ? 'id'
+              : 'NULL';
+      String nullable(String column) =>
+          columns.contains(column) ? column : 'NULL';
 
-        await db.execute('''
-          UPDATE ${ComicFields.tableName}
-          SET ${ComicFields.isCompleted} = CASE 
-            WHEN ${ComicFields.isCompleted} = '1' OR ${ComicFields.isCompleted} = 'true' THEN 1 
-            ELSE 0 
-          END
-        ''');
-
-        await db.execute('''
-          UPDATE ${ComicFields.tableName}
-          SET ${ComicFields.isFavorite} = CASE 
-            WHEN ${ComicFields.isFavorite} > 0 THEN 1 
-            ELSE 0 
-          END
-        ''');
-
-        await db.execute('''
+      await db.execute('''
           CREATE TABLE ${ComicFields.tableName}_new (
             ${ComicFields.id} ${ComicFields.idType},
             ${ComicFields.filePath} ${ComicFields.textType},
@@ -100,7 +96,7 @@ class ComicDatabase {
           )
         ''');
 
-        await db.execute('''
+      await db.execute('''
           INSERT INTO ${ComicFields.tableName}_new (
             ${ComicFields.id},
             ${ComicFields.filePath},
@@ -117,30 +113,27 @@ class ComicDatabase {
             ${ComicFields.rating},
             ${ComicFields.isCompleted}
           )
-          SELECT 
-            ${ComicFields.id},
-            ${ComicFields.filePath},
-            ${ComicFields.title},
-            ${ComicFields.picture},
-            ${ComicFields.currentPage},
-            ${ComicFields.totalPages},
-            ${ComicFields.lastOpened},
-            ${ComicFields.currentReading},
-            ${ComicFields.imagesPath},
-            ${ComicFields.isReading},
-            ${ComicFields.isFavorite},
-            ${ComicFields.bookMarks},
-            ${ComicFields.rating},
-            ${ComicFields.isCompleted}
+          SELECT
+            $idColumn,
+            ${orDefault(ComicFields.filePath, "''")},
+            ${orDefault(ComicFields.title, "''")},
+            ${nullable(ComicFields.picture)},
+            ${orDefault(ComicFields.currentPage, '0')},
+            ${orDefault(ComicFields.totalPages, '0')},
+            ${nullable(ComicFields.lastOpened)},
+            ${orDefault(ComicFields.currentReading, '0')},
+            ${orDefault(ComicFields.imagesPath, "''")},
+            ${flag(ComicFields.isReading)},
+            ${flag(ComicFields.isFavorite)},
+            ${orDefault(ComicFields.bookMarks, "''")},
+            ${orDefault(ComicFields.rating, '0')},
+            ${flag(ComicFields.isCompleted)}
           FROM ${ComicFields.tableName}
         ''');
 
-        await db.execute('DROP TABLE ${ComicFields.tableName}');
-        await db.execute(
-            'ALTER TABLE ${ComicFields.tableName}_new RENAME TO ${ComicFields.tableName}');
-      } catch (e) {
-        rethrow;
-      }
+      await db.execute('DROP TABLE ${ComicFields.tableName}');
+      await db.execute(
+          'ALTER TABLE ${ComicFields.tableName}_new RENAME TO ${ComicFields.tableName}');
     }
 
     if (oldVersion < 3) {
