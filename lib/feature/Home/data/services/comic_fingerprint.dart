@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
@@ -10,37 +11,45 @@ import 'package:crypto/crypto.dart';
 /// down, so only the file size plus the first and last [chunkSize] bytes are
 /// hashed. Archives keep their central directory / headers at those ends, so
 /// two different comics practically never collide.
+///
+/// Hashing is executed via [Isolate.run] off the UI isolate to prevent any
+/// frame drops or UI freezes during comic import.
 class ComicFingerprint {
   const ComicFingerprint({this.chunkSize = 64 * 1024});
 
   final int chunkSize;
 
-  /// SHA-1 hex digest of `size + head + tail` for the file at [path].
+  /// SHA-1 hex digest of `size + head + tail` for the file at [path],
+  /// executed in a background isolate.
   /// Throws a [FileSystemException] when the file can't be read.
   Future<String> of(String path) async {
-    final raf = await File(path).open();
+    return Isolate.run(() => _calculateFingerprint(path, chunkSize));
+  }
+
+  static String _calculateFingerprint(String path, int chunkSize) {
+    final raf = File(path).openSync();
     try {
-      final length = await raf.length();
+      final length = raf.lengthSync();
       final header = ByteData(8)..setUint64(0, length);
       final builder = BytesBuilder(copy: false)
         ..add(header.buffer.asUint8List());
 
       final headLength = length < chunkSize ? length : chunkSize;
-      builder.add(await raf.read(headLength));
+      builder.add(raf.readSync(headLength));
 
       final tailStart = length - chunkSize;
       if (tailStart > headLength) {
-        await raf.setPosition(tailStart);
+        raf.setPositionSync(tailStart);
       } else {
         // Small file: the tail is whatever follows the head (maybe nothing),
         // so every byte is hashed exactly once.
-        await raf.setPosition(headLength);
+        raf.setPositionSync(headLength);
       }
-      builder.add(await raf.read(chunkSize));
+      builder.add(raf.readSync(chunkSize));
 
       return sha1.convert(builder.takeBytes()).toString();
     } finally {
-      await raf.close();
+      raf.closeSync();
     }
   }
 
@@ -49,6 +58,8 @@ class ComicFingerprint {
     try {
       return await of(path);
     } on FileSystemException {
+      return null;
+    } catch (_) {
       return null;
     }
   }

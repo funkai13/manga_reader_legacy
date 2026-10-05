@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:manga_reader/feature/Home/presenter/controller/comic_controller.dart';
 
 import '../../../../core/widgets/generic_grid.dart';
@@ -15,6 +17,9 @@ class ComicsGrid extends ConsumerWidget {
     }
 
     final asyncComics = ref.watch(comicControllerProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+
     return asyncComics.when(
       data: (comics) => RefreshIndicator(
           onRefresh: () async {
@@ -23,9 +28,9 @@ class ComicsGrid extends ConsumerWidget {
           child: GenericGrid(
             items: comics,
             maxCrossAxisExtent: 200,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            mainAxisExtent: 250,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            mainAxisExtent: 260,
             itemBuilder: (comic) {
               return ComicCard(
                 comic: comic,
@@ -33,81 +38,42 @@ class ComicsGrid extends ConsumerWidget {
               );
             },
           )),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => Center(
+        child: Container(
+          width: 50.w,
+          height: 50.w,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFFFFE156) : const Color(0xFF4ECDC4),
+            border: Border.all(color: textColor, width: 3),
+            boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(4, 4))],
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(
+              color: Colors.black,
+              strokeWidth: 3,
+            ),
+          ),
+        ),
+      ),
       error: (error, _) => Center(
-        child: Text('Error: $error'),
+        child: Container(
+          padding: EdgeInsets.all(24.w),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF5252),
+            border: Border.all(color: Colors.black, width: 3),
+            boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(4, 4))],
+          ),
+          child: Text(
+            'ERROR:\n$error',
+            style: GoogleFonts.spaceGrotesk(
+              fontWeight: FontWeight.bold,
+              fontSize: 16.sp,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
       ),
     );
   }
 }
-/*class ComicCard extends StatelessWidget {
-  final ComicEntity comic;
-
-  const ComicCard({super.key, required this.comic});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ComicViewerScreen(comic: comic),
-          ),
-        );
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-              child: comic.picture.isNotEmpty
-                  ? Image.file(
-                      File(comic.picture),
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      color: Colors.grey[300],
-                    ))
-        ],
-      ),
-      */ /* child: Card(
-        shape: RoundedSuperellipseBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        elevation: 5,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: comic.picture.isNotEmpty
-                  ? Image.file(
-                      File(comic.picture),
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      color: Colors.grey[300],
-                      child: Icon(
-                        Icons.image,
-                        color: Colors.grey[700],
-                        size: 60,
-                      ),
-                    ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                comic.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),*/ /*
-    );
-  }
-}*/

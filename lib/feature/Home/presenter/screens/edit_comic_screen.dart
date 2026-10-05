@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:manga_reader/core/theme/colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Home/domain/entity/reading_mode.dart';
 import 'package:manga_reader/feature/Home/presenter/controller/comic_controller.dart';
@@ -24,7 +24,6 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
   late TextEditingController _authorController;
   late TextEditingController _genreController;
   late TextEditingController _collectionController;
-  // null = auto (not chosen yet); the viewer reads it as left-to-right.
   String? _comicType;
 
   @override
@@ -50,18 +49,27 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
   Future<void> _save() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El título no puede estar vacío')),
+        SnackBar(
+          content: Text(
+            'El título no puede estar vacío',
+            style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          backgroundColor: const Color(0xFFFF5252),
+          behavior: SnackBarBehavior.floating,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.zero,
+            side: BorderSide(color: Colors.black, width: 2),
+          ),
+        ),
       );
       return;
     }
 
     await ref.read(comicControllerProvider.notifier).updateComicMetadata(
           id: widget.comic.id!,
-          // '' clears the field (null would mean "leave unchanged").
           author: _authorController.text.trim(),
           genre: _genreController.text.trim(),
           collection: _collectionController.text.trim(),
-          // Only persist the type when the user actually picked one.
           comicType:
               _comicType != widget.comic.comicType ? _comicType : null,
           title: _titleController.text.trim(),
@@ -71,7 +79,18 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
       messenger.showSnackBar(
-        const SnackBar(content: Text('Cómic actualizado')),
+        SnackBar(
+          content: Text(
+            'Cómic actualizado',
+            style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, color: Colors.black),
+          ),
+          backgroundColor: const Color(0xFFA8E86C),
+          behavior: SnackBarBehavior.floating,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.zero,
+            side: BorderSide(color: Colors.black, width: 2),
+          ),
+        ),
       );
     }
   }
@@ -82,8 +101,14 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
     final size = MediaQuery.of(context).size;
     final isTablet = size.shortestSide >= 600;
     final scale = isTablet ? 0.8 : 1.0;
+    
+    final bgColor = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFFF8E7);
+    final textColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+    final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+    final accentColor = isDark ? const Color(0xFFFFE156) : const Color(0xFFFF6B9D);
 
     return Scaffold(
+      backgroundColor: bgColor,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -93,15 +118,11 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Blurred Background
                   if (widget.comic.picture.isNotEmpty)
-                    // Blurred anyway, so a small decode is enough.
                     FileThumbnail(widget.comic.picture, width: 120)
                   else
                     Container(
-                      color: isDark
-                          ? AppColorsDark.backgroundColor
-                          : AppColorsLight.backgroundColor,
+                      color: bgColor,
                     ),
                   BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -109,45 +130,61 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
                       color: Colors.black.withValues(alpha: 0.4),
                     ),
                   ),
-
-                  // Sharp Cover Image
                   Center(
                     child: Container(
                       height: 200.h * scale,
                       width: 150.w * scale,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12.r * scale),
-                        boxShadow: [
+                        color: isDark ? const Color(0xFF252542) : Colors.white,
+                        border: Border.all(color: Colors.black, width: 3),
+                        boxShadow: const [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                            color: Colors.black,
+                            blurRadius: 0,
+                            offset: Offset(6, 6),
                           ),
                         ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12.r * scale),
-                        child: widget.comic.picture.isNotEmpty
-                            ? FileThumbnail(widget.comic.picture)
-                            : Container(
-                                color: Colors.grey,
-                                child: const Icon(Icons.book, size: 50),
-                              ),
-                      ),
+                      child: widget.comic.picture.isNotEmpty
+                          ? FileThumbnail(widget.comic.picture, fit: BoxFit.cover)
+                          : Container(
+                              color: isDark ? const Color(0xFF252542) : Colors.white,
+                              child: const Icon(Icons.book, size: 50, color: Colors.black),
+                            ),
                     ),
                   ),
                 ],
               ),
             ),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
+            leading: Container(
+              margin: EdgeInsets.all(8.w * scale),
+              decoration: BoxDecoration(
+                color: bgColor,
+                border: Border.all(color: borderColor, width: 2),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back, color: textColor),
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.save, color: Colors.white),
-                onPressed: _save,
+              Container(
+                margin: EdgeInsets.all(8.w * scale),
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  border: Border.all(color: Colors.black, width: 2),
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black, offset: Offset(2, 2)),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.save, color: Colors.black),
+                  onPressed: _save,
+                ),
               ),
+              SizedBox(width: 8.w * scale),
             ],
           ),
           SliverToBoxAdapter(
@@ -157,13 +194,12 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Editar Detalles',
-                    style: TextStyle(
-                      fontSize: 24.sp * scale,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? AppColorsDark.textColor
-                          : AppColorsLight.textColor,
+                    'EDITAR DETALLES',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 28.sp * scale,
+                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                      letterSpacing: -1,
                     ),
                   ),
                   SizedBox(height: 24.h * scale),
@@ -173,6 +209,10 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
                     icon: Icons.title,
                     isDark: isDark,
                     scale: scale,
+                    textColor: textColor,
+                    borderColor: borderColor,
+                    accentColor: accentColor,
+                    bgColor: bgColor,
                   ),
                   SizedBox(height: 16.h * scale),
                   CustomAutocompleteField(
@@ -210,24 +250,23 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
                         .getSuggestions('collection'),
                     onSelected: (value) => _collectionController.text = value,
                   ),
-                  SizedBox(height: 24.h * scale),
+                  SizedBox(height: 32.h * scale),
                   Text(
-                    'Tipo de Lectura',
-                    style: TextStyle(
+                    'TIPO DE LECTURA',
+                    style: GoogleFonts.spaceGrotesk(
                       fontSize: 16.sp * scale,
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? AppColorsDark.textColor
-                          : AppColorsLight.textColor,
+                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                      letterSpacing: 1,
                     ),
                   ),
-                  SizedBox(height: 12.h * scale),
+                  SizedBox(height: 16.h * scale),
                   SegmentedButton<String>(
                     segments: [
                       for (final mode in ReadingMode.values)
                         ButtonSegment(
                           value: mode.comicType,
-                          label: Text(mode.label),
+                          label: Text(mode.label, style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)),
                           tooltip: mode.description,
                         ),
                     ],
@@ -240,27 +279,46 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
                     },
                     style: ButtonStyle(
                       visualDensity: VisualDensity.comfortable,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return accentColor;
+                          }
+                          return isDark ? const Color(0xFF252542) : Colors.white;
+                        },
+                      ),
+                      foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return Colors.black;
+                          }
+                          return textColor;
+                        },
+                      ),
+                      shape: WidgetStateProperty.all(
+                        const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                      ),
                       side: WidgetStateProperty.all(
-                        BorderSide(
-                          color: isDark
-                              ? AppColorsDark.accentColor
-                              : AppColorsLight.accentColor,
-                        ),
+                        BorderSide(color: borderColor, width: 2),
                       ),
                     ),
                   ),
-                  SizedBox(height: 8.h * scale),
-                  Text(
-                    _comicType == null
-                        ? 'Automático: se lee de izquierda a derecha'
-                        : ReadingMode.fromComicType(_comicType).description,
-                    style: TextStyle(
-                      fontSize: 13.sp * scale,
-                      color: (isDark
-                              ? AppColorsDark.textColor
-                              : AppColorsLight.textColor)
-                          .withValues(alpha: 0.7),
+                  SizedBox(height: 16.h * scale),
+                  Container(
+                    padding: EdgeInsets.all(12.w * scale),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF252542) : Colors.white,
+                      border: Border(left: BorderSide(color: accentColor, width: 4), top: BorderSide(color: borderColor, width: 2), right: BorderSide(color: borderColor, width: 2), bottom: BorderSide(color: borderColor, width: 2)),
+                    ),
+                    child: Text(
+                      _comicType == null
+                          ? 'Automático: se lee de izquierda a derecha'
+                          : ReadingMode.fromComicType(_comicType).description,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 14.sp * scale,
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   SizedBox(height: 40.h * scale),
@@ -279,36 +337,43 @@ class _EditComicScreenState extends ConsumerState<EditComicScreen> {
     required IconData icon,
     required bool isDark,
     required double scale,
+    required Color textColor,
+    required Color borderColor,
+    required Color accentColor,
+    required Color bgColor,
   }) {
     return TextFormField(
       controller: controller,
-      style: TextStyle(
+      style: GoogleFonts.spaceGrotesk(
         fontSize: 16.sp * scale,
-        color: isDark ? AppColorsDark.textColor : AppColorsLight.textColor,
+        color: textColor,
+        fontWeight: FontWeight.bold,
       ),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: GoogleFonts.spaceGrotesk(color: textColor.withValues(alpha: 0.7), fontWeight: FontWeight.bold),
         prefixIcon: Icon(
           icon,
-          color: isDark ? AppColorsDark.accentColor : AppColorsLight.accentColor,
+          color: textColor,
         ),
         filled: true,
-        fillColor: isDark
-            ? AppColorsDark.cardColor
-            : AppColorsLight.cardColor.withValues(alpha: 0.5),
+        fillColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFFF8E7),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r * scale),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.zero,
+          borderSide: BorderSide(color: borderColor, width: 2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.zero,
+          borderSide: BorderSide(color: borderColor, width: 2),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r * scale),
+          borderRadius: BorderRadius.zero,
           borderSide: BorderSide(
-            color: isDark
-                ? AppColorsDark.accentColor
-                : AppColorsLight.accentColor,
-            width: 2,
+            color: accentColor,
+            width: 3,
           ),
         ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.w * scale, vertical: 18.h * scale),
       ),
     );
   }

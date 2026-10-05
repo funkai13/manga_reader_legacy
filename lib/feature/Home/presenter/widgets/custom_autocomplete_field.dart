@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:manga_reader/core/theme/colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class CustomAutocompleteField extends StatefulWidget {
   final String label;
@@ -22,14 +22,11 @@ class CustomAutocompleteField extends StatefulWidget {
   });
 
   @override
-  State<CustomAutocompleteField> createState() =>
-      _CustomAutocompleteFieldState();
+  State<CustomAutocompleteField> createState() => _CustomAutocompleteFieldState();
 }
 
 class _CustomAutocompleteFieldState extends State<CustomAutocompleteField> {
   final _focusNode = FocusNode();
-
-  // Suggestions come from the DB; load them once instead of on every keystroke.
   late Future<List<String>> _options = widget.optionsBuilder();
 
   @override
@@ -51,8 +48,13 @@ class _CustomAutocompleteFieldState extends State<CustomAutocompleteField> {
     final scale = widget.scale;
     final isDark = widget.isDark;
     final icon = widget.icon;
+    
+    final textColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+    final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+    final bgColor = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFFF8E7);
+    final accentColor = isDark ? const Color(0xFFFFE156) : const Color(0xFFFF6B9D);
+
     return LayoutBuilder(builder: (context, constraints) {
-      // The external controller is used directly, so there is nothing to sync.
       return RawAutocomplete<String>(
         textEditingController: widget.controller,
         focusNode: _focusNode,
@@ -62,8 +64,7 @@ class _CustomAutocompleteFieldState extends State<CustomAutocompleteField> {
             return const Iterable<String>.empty();
           }
           final options = await _options;
-          return options
-              .where((String option) => option.toLowerCase().contains(query));
+          return options.where((String option) => option.toLowerCase().contains(query));
         },
         onSelected: widget.onSelected,
         fieldViewBuilder: (
@@ -75,39 +76,39 @@ class _CustomAutocompleteFieldState extends State<CustomAutocompleteField> {
           return TextFormField(
             controller: fieldTextEditingController,
             focusNode: fieldFocusNode,
-            style: TextStyle(
+            style: GoogleFonts.spaceGrotesk(
               fontSize: 16 * scale,
-              color: isDark ? AppColorsDark.textColor : AppColorsLight.textColor,
+              color: textColor,
+              fontWeight: FontWeight.bold,
             ),
             decoration: InputDecoration(
               labelText: widget.label,
+              labelStyle: GoogleFonts.spaceGrotesk(color: textColor.withValues(alpha: 0.7), fontWeight: FontWeight.bold),
               prefixIcon: icon != null
                   ? Icon(
                       icon,
-                      color: isDark
-                          ? AppColorsDark.accentColor
-                          : AppColorsLight.accentColor,
+                      color: textColor,
                     )
                   : null,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12 * scale),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.zero,
+                borderSide: BorderSide(color: borderColor, width: 2),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+                borderSide: BorderSide(color: borderColor, width: 2),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12 * scale),
+                borderRadius: BorderRadius.zero,
                 borderSide: BorderSide(
-                  color: isDark
-                      ? AppColorsDark.accentColor
-                      : AppColorsLight.accentColor,
-                  width: 2,
+                  color: accentColor,
+                  width: 3,
                 ),
               ),
               filled: true,
-              fillColor: isDark
-                  ? AppColorsDark.cardColor
-                  : AppColorsLight.cardColor.withValues(alpha: 0.5),
+              fillColor: bgColor,
               contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16 * scale, vertical: 14 * scale),
+                  horizontal: 16 * scale, vertical: 18 * scale),
             ),
           );
         },
@@ -119,10 +120,21 @@ class _CustomAutocompleteFieldState extends State<CustomAutocompleteField> {
           return Align(
             alignment: Alignment.topLeft,
             child: Material(
-              elevation: 4.0,
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
+              elevation: 0,
+              color: Colors.transparent,
+              child: Container(
                 width: constraints.maxWidth,
+                margin: const EdgeInsets.only(top: 4),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  border: Border.all(color: borderColor, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black,
+                      offset: Offset(4, 4),
+                    ),
+                  ],
+                ),
                 child: ListView.builder(
                   padding: EdgeInsets.zero,
                   shrinkWrap: true,
@@ -133,14 +145,20 @@ class _CustomAutocompleteFieldState extends State<CustomAutocompleteField> {
                       onTap: () {
                         onSelected(option);
                       },
-                      borderRadius: index == 0 
-                          ? const BorderRadius.vertical(top: Radius.circular(12))
-                          : index == options.length - 1 
-                              ? const BorderRadius.vertical(bottom: Radius.circular(12))
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: index < options.length - 1
+                              ? Border(bottom: BorderSide(color: borderColor, width: 2))
                               : null,
-                      child: Padding(
+                        ),
                         padding: const EdgeInsets.all(16.0),
-                        child: Text(option),
+                        child: Text(
+                          option,
+                          style: GoogleFonts.spaceGrotesk(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     );
                   },

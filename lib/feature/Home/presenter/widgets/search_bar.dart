@@ -2,7 +2,7 @@ import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:manga_reader/core/theme/colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 
 import 'package:manga_reader/feature/Reader/presenter/screens/comic_viewer_screen.dart';
@@ -16,10 +16,12 @@ SliverToBoxAdapter buildSearchBar(
   FocusNode searchFocusNode,
   bool isTablet,
 ) {
-  // Minimum height only: the bar may grow with the text scale so the hint is
-  // never clipped (a fixed 50px bar cut "Buscar en tu biblioteca" on phones).
-  final double kSearchBarBaseHeight = isTablet ? 100.0 : 50.0;
+  final double kSearchBarBaseHeight = isTablet ? 80.0 : 56.0;
   final barHeight = kSearchBarBaseHeight * scale;
+
+  final bgColor = isDark ? const Color(0xFF252542) : const Color(0xFFFFFFFF);
+  final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+  final textColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
 
   return SliverToBoxAdapter(
     child: Padding(
@@ -27,13 +29,14 @@ SliverToBoxAdapter buildSearchBar(
       child: Container(
         margin: EdgeInsets.only(bottom: 16.h * scale, top: 16.h * scale),
         decoration: BoxDecoration(
-          color: isDark ? AppColorsDark.cardColor : AppColorsLight.cardColor,
-          borderRadius: BorderRadius.circular(16.r * scale),
-          boxShadow: [
+          color: bgColor,
+          borderRadius: BorderRadius.zero,
+          border: Border.all(color: borderColor, width: 3),
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10 * scale,
-              offset: const Offset(0, 2),
+              color: Colors.black,
+              blurRadius: 0,
+              offset: Offset(4, 4),
             ),
           ],
         ),
@@ -43,14 +46,11 @@ SliverToBoxAdapter buildSearchBar(
           searchController: searchController,
           headerHeight: barHeight,
           viewPadding: EdgeInsets.zero,
-          viewSide: BorderSide.none,
-          viewBackgroundColor:
-              isDark ? AppColorsDark.cardColor : AppColorsLight.cardColor,
-          viewShape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.r * scale),
-          ),
+          viewSide: BorderSide(color: borderColor, width: 3),
+          viewBackgroundColor: bgColor,
+          viewShape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           viewConstraints: BoxConstraints(
-            maxHeight: 250.h * scale,
+            maxHeight: 300.h * scale,
           ),
           builder: (BuildContext context, SearchController controller) {
             return SearchBar(
@@ -68,33 +68,35 @@ SliverToBoxAdapter buildSearchBar(
               },
               leading: Icon(
                 Icons.search,
-                color: isDark
-                    ? AppColorsDark.textColor.withValues(alpha: 0.6)
-                    : AppColorsLight.textColor.withValues(alpha: 0.6),
-                size: 20.sp * scale,
+                color: textColor,
+                size: 24.sp * scale,
               ),
-              hintText: 'Buscar en tu biblioteca',
-              hintStyle: WidgetStatePropertyAll(
-                TextStyle(
-                  color: isDark
-                      ? AppColorsDark.textColor.withValues(alpha: 0.4)
-                      : AppColorsLight.textColor.withValues(alpha: 0.4),
-                  fontSize: 12.sp * scale,
+              hintText: 'BUSCAR EN TU BIBLIOTECA',
+              textStyle: WidgetStatePropertyAll(
+                GoogleFonts.spaceGrotesk(
+                  color: textColor,
+                  fontSize: 14.sp * scale,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              backgroundColor: WidgetStatePropertyAll(
-                isDark ? AppColorsDark.cardColor : AppColorsLight.cardColor,
+              hintStyle: WidgetStatePropertyAll(
+                GoogleFonts.spaceGrotesk(
+                  color: textColor.withValues(alpha: 0.5),
+                  fontSize: 14.sp * scale,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              shape: WidgetStatePropertyAll(
+              backgroundColor: WidgetStatePropertyAll(bgColor),
+              shape: const WidgetStatePropertyAll(
                 RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.r * scale),
+                  borderRadius: BorderRadius.zero,
                   side: BorderSide.none,
                 ),
               ),
+              elevation: const WidgetStatePropertyAll(0),
             );
           },
-          suggestionsBuilder:
-              (BuildContext context, SearchController controller) {
+          suggestionsBuilder: (BuildContext context, SearchController controller) {
             final inputRaw = controller.text;
             final input = inputRaw.toLowerCase().trim();
 
@@ -111,62 +113,81 @@ SliverToBoxAdapter buildSearchBar(
 
             if (results.isEmpty) {
               return [
-                ListTile(
-                  leading: const Icon(Icons.search_off),
-                  title: const Text('Sin resultados'),
-                  subtitle: Text(
-                    'No se encontró ningún cómic con "$inputRaw"',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: borderColor, width: 2)),
                   ),
-                  onTap: () {
-                    controller.closeView('');
-                    controller.clear();
-                    FocusScope.of(context).unfocus();
-                  },
+                  child: ListTile(
+                    leading: Icon(Icons.search_off, color: textColor),
+                    title: Text(
+                      'Sin resultados',
+                      style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, color: textColor),
+                    ),
+                    subtitle: Text(
+                      'No se encontró ningún cómic con "$inputRaw"',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.spaceGrotesk(color: textColor.withValues(alpha: 0.7)),
+                    ),
+                    onTap: () {
+                      controller.closeView('');
+                      controller.clear();
+                      FocusScope.of(context).unfocus();
+                    },
+                  ),
                 ),
               ];
             }
 
             return results.map((comic) {
-              return ListTile(
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12.w * scale,
-                  vertical: 4.h * scale,
+              return Container(
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: borderColor, width: 2)),
                 ),
-                leading: _buildComicThumbnail(comic, isDark, scale),
-                title: _buildHighlightedTitle(
-                  comic.title,
-                  inputRaw,
-                  isDark,
-                  scale,
-                ),
-                subtitle: Text(
-                  comic.isCompleted
-                      ? 'Completado'
-                      : comic.isReading
-                          ? 'En progreso'
-                          : (comic.currentReadPage == 0 ? 'Sin leer' : 'Leído'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.sp * scale),
-                ),
-                onTap: () async {
-                  controller.closeView(comic.title);
-                  FocusScope.of(context).unfocus();
-
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ComicViewerScreen(comic: comic),
+                child: ListTile(
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16.w * scale,
+                    vertical: 8.h * scale,
+                  ),
+                  leading: _buildComicThumbnail(comic, isDark, scale, borderColor),
+                  title: _buildHighlightedTitle(
+                    comic.title,
+                    inputRaw,
+                    isDark,
+                    scale,
+                    textColor,
+                  ),
+                  subtitle: Text(
+                    comic.isCompleted
+                        ? 'COMPLETADO'
+                        : comic.isReading
+                            ? 'EN PROGRESO'
+                            : (comic.currentReadPage == 0 ? 'SIN LEER' : 'LEÍDO'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 10.sp * scale,
+                      fontWeight: FontWeight.w900,
+                      color: textColor.withValues(alpha: 0.6),
                     ),
-                  );
+                  ),
+                  onTap: () async {
+                    controller.closeView(comic.title);
+                    FocusScope.of(context).unfocus();
 
-                  if (!context.mounted) return;
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ComicViewerScreen(comic: comic),
+                      ),
+                    );
 
-                  controller.text = '';
-                  FocusScope.of(context).unfocus();
-                },
+                    if (!context.mounted) return;
+
+                    controller.text = '';
+                    FocusScope.of(context).unfocus();
+                  },
+                ),
               );
             });
           },
@@ -176,58 +197,65 @@ SliverToBoxAdapter buildSearchBar(
   );
 }
 
-Widget _buildComicThumbnail(ComicEntity comic, bool isDark, double scale) {
+Widget _buildComicThumbnail(ComicEntity comic, bool isDark, double scale, Color borderColor) {
   final width = 36.w * scale;
   final height = 52.h * scale;
 
   if (comic.picture.isNotEmpty) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8.r * scale),
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: borderColor, width: 2),
+      ),
       child: FileThumbnail(
         comic.picture,
         width: width,
         height: height,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) =>
-            _fallbackThumb(isDark, width, height, scale),
+            _fallbackThumb(isDark, width, height, scale, borderColor),
       ),
     );
   }
 
-  return _fallbackThumb(isDark, width, height, scale);
+  return _fallbackThumb(isDark, width, height, scale, borderColor);
 }
 
-Widget _fallbackThumb(bool isDark, double width, double height, double scale) {
+Widget _fallbackThumb(bool isDark, double width, double height, double scale, Color borderColor) {
+  final bgColor = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFFF8E7);
   return Container(
     width: width,
     height: height,
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(8.r * scale),
-      color: isDark ? AppColorsDark.cardColor : AppColorsLight.cardColor,
+      border: Border.all(color: borderColor, width: 2),
+      color: bgColor,
     ),
     child: Icon(
       Icons.book,
       size: 18.sp * scale,
-      color: isDark
-          ? AppColorsDark.textColor.withValues(alpha: 0.4)
-          : AppColorsLight.textColor.withValues(alpha: 0.4),
+      color: borderColor.withValues(alpha: 0.4),
     ),
   );
 }
 
-/// Texto del título con highlight azul en lo que coincide con la búsqueda
 Widget _buildHighlightedTitle(
   String title,
   String query,
   bool isDark,
   double scale,
+  Color baseColor,
 ) {
+  final highlightColor = isDark ? const Color(0xFFFFE156) : const Color(0xFFFF6B9D);
+
   if (query.isEmpty) {
     return Text(
-      title,
+      title.toUpperCase(),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: 13.sp * scale),
+      style: GoogleFonts.spaceGrotesk(
+        fontSize: 14.sp * scale,
+        fontWeight: FontWeight.bold,
+        color: baseColor,
+      ),
     );
   }
 
@@ -237,10 +265,14 @@ Widget _buildHighlightedTitle(
 
   if (matchIndex == -1) {
     return Text(
-      title,
+      title.toUpperCase(),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: 13.sp * scale),
+      style: GoogleFonts.spaceGrotesk(
+        fontSize: 14.sp * scale,
+        fontWeight: FontWeight.bold,
+        color: baseColor,
+      ),
     );
   }
 
@@ -248,26 +280,24 @@ Widget _buildHighlightedTitle(
   final matchText = title.substring(matchIndex, matchIndex + query.length);
   final afterMatch = title.substring(matchIndex + query.length);
 
-  final baseColor = isDark ? AppColorsDark.textColor : AppColorsLight.textColor;
-  final highlightColor =
-      isDark ? AppColorsDark.accentColor : AppColorsLight.accentColor;
-
   return Text.rich(
     TextSpan(
       children: [
-        TextSpan(text: beforeMatch),
+        TextSpan(text: beforeMatch.toUpperCase()),
         TextSpan(
-          text: matchText,
-          style: TextStyle(
-            color: highlightColor,
-            fontWeight: FontWeight.w600,
+          text: matchText.toUpperCase(),
+          style: GoogleFonts.spaceGrotesk(
+            color: isDark ? Colors.black : Colors.white,
+            backgroundColor: highlightColor,
+            fontWeight: FontWeight.w900,
           ),
         ),
-        TextSpan(text: afterMatch),
+        TextSpan(text: afterMatch.toUpperCase()),
       ],
-      style: TextStyle(
-        fontSize: 13.sp * scale,
+      style: GoogleFonts.spaceGrotesk(
+        fontSize: 14.sp * scale,
         color: baseColor,
+        fontWeight: FontWeight.bold,
       ),
     ),
     maxLines: 1,

@@ -4,14 +4,12 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Home/domain/exceptions/comic_exceptions.dart';
 import 'package:manga_reader/feature/Home/presenter/controller/comic_controller.dart';
 import 'package:manga_reader/feature/Home/presenter/widgets/comic_metadata_dialog.dart';
 
-/// Picks a CBZ/CBR and imports it. The archive is extracted while the user
-/// fills in the metadata dialog; if they finish first, a spinner is shown
-/// until the extraction is done.
 Future<void> importComicFlow(BuildContext context, WidgetRef ref) async {
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context);
@@ -24,13 +22,11 @@ Future<void> importComicFlow(BuildContext context, WidgetRef ref) async {
 
   try {
     if (!ComicController.isSupportedArchive(file.name)) {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Seleccione un archivo con extensión .cbr o .cbz'),
-      ));
+      _showNeoSnackBar(messenger, 'Seleccione un archivo con extensión .cbr o .cbz', isError: true);
       return;
     }
     if (await notifier.isAlreadyImported(filePath)) {
-      messenger.showSnackBar(_alreadyInLibrary);
+      _showNeoSnackBar(messenger, 'Este cómic ya está en tu biblioteca.', isError: true);
       return;
     }
     if (!context.mounted) return;
@@ -42,7 +38,6 @@ Future<void> importComicFlow(BuildContext context, WidgetRef ref) async {
       (_) => processingDone = true,
       onError: (Object _) {
         processingDone = true;
-        // The comic couldn't be imported: there is nothing left to describe.
         if (dialogOpen) navigator.pop();
       },
     );
@@ -58,40 +53,99 @@ Future<void> importComicFlow(BuildContext context, WidgetRef ref) async {
         : await _whileShowingSpinner(navigator, processing);
     await notifier.finishImport(created, metadata);
   } on DuplicateComicException {
-    // Same content imported meanwhile (e.g. picked twice in a row).
-    messenger.showSnackBar(_alreadyInLibrary);
+    _showNeoSnackBar(messenger, 'Este cómic ya está en tu biblioteca.', isError: true);
   } on UnsupportedComicException catch (e) {
-    messenger.showSnackBar(SnackBar(
-      content: Text(
-        e.message.isNotEmpty
-            ? e.message
-            : 'Este archivo de cómic no está soportado.',
-      ),
-    ));
+    _showNeoSnackBar(messenger, e.message.isNotEmpty ? e.message : 'Este archivo de cómic no está soportado.', isError: true);
   } catch (_) {
-    messenger.showSnackBar(const SnackBar(
-      content: Text('Ocurrió un error al agregar el cómic.'),
-    ));
+    _showNeoSnackBar(messenger, 'Ocurrió un error al agregar el cómic.', isError: true);
   } finally {
     unawaited(_clearPickerCache());
   }
 }
 
-const _alreadyInLibrary = SnackBar(
-  content: Text('Este cómic ya está en tu biblioteca.'),
-);
+void _showNeoSnackBar(ScaffoldMessengerState messenger, String message, {bool isError = false}) {
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        message,
+        style: GoogleFonts.spaceGrotesk(
+          fontWeight: FontWeight.bold,
+          color: isError ? Colors.white : Colors.black,
+        ),
+      ),
+      backgroundColor: isError ? const Color(0xFFFF5252) : const Color(0xFFA8E86C),
+      behavior: SnackBarBehavior.floating,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.zero,
+        side: BorderSide(color: Colors.black, width: 3),
+      ),
+      elevation: 0,
+      margin: const EdgeInsets.all(16),
+    ),
+  );
+}
 
 Future<T> _whileShowingSpinner<T>(NavigatorState navigator, Future<T> work) {
+  final isDark = Theme.of(navigator.context).brightness == Brightness.dark;
+  final bgColor = isDark ? const Color(0xFF252542) : const Color(0xFFFFFFFF);
+  final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+  final textColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+  final accentColor = isDark ? const Color(0xFFFFE156) : const Color(0xFF4ECDC4);
+
   showDialog<void>(
     context: navigator.context,
     barrierDismissible: false,
-    builder: (_) => const Center(child: CircularProgressIndicator()),
+    barrierColor: Colors.black.withValues(alpha: 0.6),
+    builder: (_) => Center(
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: bgColor,
+          border: Border.all(color: borderColor, width: 3),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black,
+              offset: Offset(6, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: accentColor,
+                border: Border.all(color: borderColor, width: 3),
+                boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(4, 4))],
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.black,
+                  strokeWidth: 3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'IMPORTANDO CÓMIC...',
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+                decoration: TextDecoration.none,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
   return work.whenComplete(navigator.pop);
 }
 
-/// On mobile file_picker copies the picked file into the app cache; the
-/// pages are already extracted, so that copy (often hundreds of MB) can go.
 Future<void> _clearPickerCache() async {
   if (!Platform.isAndroid && !Platform.isIOS) return;
   try {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:manga_reader/core/theme/colors.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class EmptyComicsScreen extends StatefulWidget {
   final VoidCallback onAddComic;
@@ -33,10 +34,13 @@ class _EmptyComicsScreenState extends State<EmptyComicsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColorsDark.textColor : AppColorsLight.textColor;
+    final bgColor = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFFF8E7);
+    final textColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+    final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+    final accentColor = isDark ? const Color(0xFFFFE156) : const Color(0xFFFFE156);
 
     return Scaffold(
+      backgroundColor: bgColor,
       body: Center(
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 700),
@@ -49,33 +53,76 @@ class _EmptyComicsScreenState extends State<EmptyComicsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.menu_book_rounded,
-                    size: 90, color: textColor.withValues(alpha: 0.35)),
-                const SizedBox(height: 20),
-                const Text(
-                  'Sin comics aún',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: EdgeInsets.all(24.w),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4ECDC4),
+                    border: Border.all(color: borderColor, width: 4),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black,
+                        offset: Offset(6, 6),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.menu_book_rounded,
+                    size: 90.sp,
+                    color: Colors.black,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 32.h),
+                Text(
+                  'SIN COMICS AÚN',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 28.sp,
+                    fontWeight: FontWeight.w900,
+                    color: textColor,
+                    letterSpacing: -1,
+                  ),
+                ),
+                SizedBox(height: 12.h),
                 Text(
                   'Agrega tu primer comic para comenzar.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: textColor.withValues(alpha: 0.6),
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: textColor.withValues(alpha: 0.8),
                   ),
                 ),
-                const SizedBox(height: 30),
-                ElevatedButton.icon(
-                  onPressed: widget.onAddComic,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar Comic'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
+                SizedBox(height: 40.h),
+                GestureDetector(
+                  onTap: widget.onAddComic,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 32.w,
+                      vertical: 16.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      border: Border.all(color: borderColor, width: 3),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black,
+                          offset: Offset(4, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add, color: Colors.black, size: 24.sp),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'AGREGAR COMIC',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

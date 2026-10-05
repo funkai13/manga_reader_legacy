@@ -2,7 +2,7 @@ import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:manga_reader/core/theme/colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 
 class ComicCard extends StatelessWidget {
@@ -20,22 +20,26 @@ class ComicCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF252542) : const Color(0xFFFFFFFF);
+    final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
 
     return AspectRatio(
       aspectRatio: 3 / 4,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12.r * scale),
-          boxShadow: [
+          color: cardColor,
+          borderRadius: BorderRadius.circular(8.r * scale),
+          border: Border.all(color: borderColor, width: 2.5),
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 12 * scale,
-              offset: const Offset(0, 4),
+              color: Colors.black,
+              blurRadius: 0,
+              offset: Offset(4, 4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.r * scale),
+          borderRadius: BorderRadius.circular((8 - 2.5).r * scale),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -44,11 +48,11 @@ class ComicCard extends StatelessWidget {
                   comic.picture,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
-                    return _buildPlaceholder(isDark);
+                    return _buildPlaceholder(isDark, borderColor);
                   },
                 )
               else
-                _buildPlaceholder(isDark),
+                _buildPlaceholder(isDark, borderColor),
               Positioned(
                 left: 0,
                 right: 0,
@@ -56,19 +60,15 @@ class ComicCard extends StatelessWidget {
                 child: Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: 8.w * scale,
-                    vertical: 6.h * scale,
+                    vertical: 8.h * scale,
                   ),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.8),
-                        Colors.black.withValues(alpha: 0.0),
-                      ],
+                    color: Colors.black.withValues(alpha: 0.7),
+                    border: Border(
+                      top: BorderSide(color: borderColor, width: 2.5),
                     ),
                   ),
-                  child: _buildBottomRow(isDark),
+                  child: _buildBottomRow(isDark, borderColor),
                 ),
               ),
               if (onEdit != null)
@@ -80,13 +80,21 @@ class ComicCard extends StatelessWidget {
                     child: Container(
                       padding: EdgeInsets.all(6.w * scale),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
+                        color: isDark ? const Color(0xFFFF6B9D) : const Color(0xFFFFE156),
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black, width: 2),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black,
+                            offset: Offset(2, 2),
+                            blurRadius: 0,
+                          ),
+                        ],
                       ),
                       child: Icon(
                         Icons.edit,
                         size: 14.sp * scale,
-                        color: Colors.white,
+                        color: Colors.black,
                       ),
                     ),
                   ),
@@ -98,35 +106,28 @@ class ComicCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPlaceholder(bool isDark) {
+  Widget _buildPlaceholder(bool isDark, Color borderColor) {
     return Container(
-      color: isDark ? AppColorsDark.cardColor : AppColorsLight.cardColor,
+      color: isDark ? const Color(0xFF252542) : const Color(0xFFFFFFFF),
       child: Center(
         child: Icon(
           Icons.book,
-          color: isDark
-              ? AppColorsDark.textColor.withValues(alpha: 0.3)
-              : AppColorsLight.textColor.withValues(alpha: 0.3),
+          color: borderColor.withValues(alpha: 0.5),
           size: 40.sp * scale,
         ),
       ),
     );
   }
 
-  /// Status chip on the left, "Pág. N" on the right. Both sides are
-  /// Flexible and scale down instead of overflowing when the card is narrow
-  /// (e.g. ComicsGrid on tablets, where .sp grows faster than the cell).
-  Widget _buildBottomRow(bool isDark) {
-    final chip = _buildStatusChip(isDark);
+  Widget _buildBottomRow(bool isDark, Color borderColor) {
+    final chip = _buildStatusChip(isDark, borderColor);
     final showPage = comic.currentReadPage > 0 && !comic.isCompleted;
 
     return Row(
-      mainAxisAlignment:
-          chip == null ? MainAxisAlignment.end : MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: chip == null ? MainAxisAlignment.end : MainAxisAlignment.spaceBetween,
       children: [
         if (chip != null)
           Flexible(
-            // The chip gets the larger share; the page label takes the rest.
             flex: 3,
             child: FittedBox(
               fit: BoxFit.scaleDown,
@@ -146,10 +147,10 @@ class ComicCard extends StatelessWidget {
                   'Pág. ${comic.currentReadPage + 1}',
                   maxLines: 1,
                   softWrap: false,
-                  style: TextStyle(
-                    fontSize: 10.sp * scale,
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontWeight: FontWeight.w600,
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 12.sp * scale,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -159,26 +160,22 @@ class ComicCard extends StatelessWidget {
     );
   }
 
-  Widget? _buildStatusChip(bool isDark) {
+  Widget? _buildStatusChip(bool isDark, Color borderColor) {
     String? label;
     Color? color;
 
     if (comic.isCompleted) {
       label = 'Completado';
-      color = Colors.greenAccent.shade400;
+      color = const Color(0xFFA8E86C);
     } else if (comic.isReading) {
       label = 'Leyendo';
-      color = Colors.orangeAccent.shade400;
+      color = const Color(0xFFFF9F43);
     } else if (comic.currentReadPage == 0) {
       label = 'Nuevo';
-      color = Colors.blueAccent.shade400;
+      color = const Color(0xFF4ECDC4);
     }
 
     if (label == null || color == null) return null;
-
-    if (isDark) {
-      color = color.withValues(alpha: 0.9);
-    }
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -187,17 +184,25 @@ class ComicCard extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(999.r * scale),
+        border: Border.all(color: Colors.black, width: 2),
+        borderRadius: BorderRadius.circular(4.r * scale),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(2, 2),
+            blurRadius: 0,
+          ),
+        ],
       ),
       child: Text(
-        label,
+        label.toUpperCase(),
         maxLines: 1,
         softWrap: false,
-        style: TextStyle(
+        style: GoogleFonts.spaceGrotesk(
           fontSize: 10.sp * scale,
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.2,
+          color: Colors.black,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
         ),
       ),
     );

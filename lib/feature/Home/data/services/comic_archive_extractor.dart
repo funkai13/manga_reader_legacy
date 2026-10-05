@@ -117,7 +117,7 @@ class ComicArchiveExtractor {
       throw UnsupportedComicException('No se encontró el archivo del cómic.');
     }
 
-    final kind = detectArchiveKind(archivePath);
+    final kind = await Isolate.run(() => detectArchiveKind(archivePath));
     switch (kind) {
       case ArchiveKind.zip:
         return Isolate.run(() => _extractZip(archivePath, outputDir));
