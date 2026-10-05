@@ -2,15 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../helpers/widget/fonts.dart';
 
 /// Golden test bootstrap:
-///  * loads Roboto + MaterialIcons from the Flutter SDK so goldens show real
-///    text and icons instead of test-font boxes;
+///  * loads Roboto + MaterialIcons + GoogleFonts families from the Flutter SDK
+///    so goldens show real text and icons instead of test-font boxes;
+///  * disables runtime font fetching over HTTP in tests;
 ///  * installs a comparator that tolerates tiny anti-aliasing differences.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   TestWidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
   await loadAppFonts();
 
   final current = goldenFileComparator;

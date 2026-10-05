@@ -38,9 +38,16 @@ Future<void> loadAppFonts() async {
   final fontsDir = Directory('${root.path}/bin/cache/artifacts/material_fonts');
   if (!fontsDir.existsSync()) return;
 
-  // 'Roboto' is what Material text themes request. Styles without a
-  // fontFamily are handled by `withDeviceDefaultFont` in pump_app.dart.
-  for (final family in const ['Roboto']) {
+  // Load Roboto, SpaceGrotesk, WorkSans, JetBrainsMono, DMSans
+  // so GoogleFonts and text themes render real text instead of Ahem boxes.
+  final families = [
+    'Roboto',
+    'SpaceGrotesk',
+    'WorkSans',
+    'JetBrainsMono',
+    'DMSans',
+  ];
+  for (final family in families) {
     final loader = FontLoader(family);
     for (final name in const [
       'roboto-thin.ttf',
@@ -56,6 +63,37 @@ Future<void> loadAppFonts() async {
       if (f.existsSync()) loader.addFont(_read(f));
     }
     await loader.load();
+
+    for (final variant in const [
+      'regular',
+      'italic',
+      '100',
+      '200',
+      '300',
+      '400',
+      '500',
+      '600',
+      '700',
+      '800',
+      '900',
+    ]) {
+      final variantLoader = FontLoader('${family}_$variant');
+      final fontName = switch (variant) {
+        '100' => 'roboto-thin.ttf',
+        '200' || '300' => 'roboto-light.ttf',
+        'regular' || '400' => 'roboto-regular.ttf',
+        '500' || '600' => 'roboto-medium.ttf',
+        '700' => 'roboto-bold.ttf',
+        '800' || '900' => 'roboto-black.ttf',
+        'italic' => 'roboto-italic.ttf',
+        _ => 'roboto-regular.ttf',
+      };
+      final f = File('${fontsDir.path}/$fontName');
+      if (f.existsSync()) {
+        variantLoader.addFont(_read(f));
+        await variantLoader.load();
+      }
+    }
   }
 
   final iconsFile = File('${fontsDir.path}/materialicons-regular.otf');

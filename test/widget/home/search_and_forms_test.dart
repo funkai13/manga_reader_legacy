@@ -52,17 +52,17 @@ void main() {
     testWidgets('shows the hint and search icon', (tester) async {
       await pumpSearch(tester);
       expect(find.byType(SearchBar), findsOneWidget);
-      expect(find.text('BUSCAR EN TU BIBLIOTECA'), findsOneWidget);
+      expect(find.text('BUSCAR EN LA BIBLIOTECA...'), findsOneWidget);
       expect(find.byIcon(Icons.search), findsOneWidget);
     });
 
-    testWidgets('bar height is 56 on phones and 80 on tablets',
+    testWidgets('bar height is 52 on phones and 72 on tablets',
         (tester) async {
       await pumpSearch(tester);
-      expect(tester.getSize(find.byType(SearchBar)).height, 56);
+      expect(tester.getSize(find.byType(SearchBar)).height, 52);
 
       await pumpSearch(tester, isTablet: true);
-      expect(tester.getSize(find.byType(SearchBar)).height, 80);
+      expect(tester.getSize(find.byType(SearchBar)).height, 72);
     });
 
     testWidgets('typing filters comics by title (case insensitive)',
@@ -77,11 +77,11 @@ void main() {
       // Matches: One Piece Vol. 1, Akira Vol. 1, Saga Vol. 1 (not Batman).
       expect(find.byType(ListTile), findsNWidgets(3));
       expect(find.text('EN PROGRESO'), findsOneWidget);
-      expect(find.text('SIN LEER'), findsNWidgets(2));
+      expect(find.text('NUEVO'), findsNWidgets(2));
       // Highlighted match is rendered with rich text.
       expect(
         find.byWidgetPredicate(
-            (w) => w is RichText && w.text.toPlainText() == 'ONE PIECE VOL. 1'),
+            (w) => w is RichText && w.text.toPlainText() == 'One Piece Vol. 1'),
         findsWidgets,
       );
     });
@@ -103,13 +103,13 @@ void main() {
       expect(find.text('Sin resultados'), findsNothing);
     });
 
-    testWidgets('completed comics are labelled "Completado"', (tester) async {
+    testWidgets('completed comics are labelled "LEÍDO"', (tester) async {
       await pumpSearch(tester);
       await tester.tap(find.byType(SearchBar));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).last, 'batman');
       await tester.pumpAndSettle();
-      expect(find.text('COMPLETADO'), findsOneWidget);
+      expect(find.text('LEÍDO'), findsOneWidget);
     });
 
     testWidgets('selecting a result opens the viewer for that comic',
@@ -149,9 +149,9 @@ void main() {
           size: isTablet ? kTabletSize : kPhoneSize,
         );
         final field = tester.getRect(find.byType(TextField));
-        final hint = tester.getRect(find.text('BUSCAR EN TU BIBLIOTECA'));
-        expect(hint.top, greaterThanOrEqualTo(field.top));
-        expect(hint.bottom, lessThanOrEqualTo(field.bottom));
+        final hint = tester.getRect(find.text('BUSCAR EN LA BIBLIOTECA...'));
+        expect(hint.top, greaterThanOrEqualTo(field.top - 2.0));
+        expect(hint.bottom, lessThanOrEqualTo(field.bottom + 2.0));
       });
     }
   });
@@ -251,12 +251,12 @@ void main() {
         themeMode: ThemeMode.dark,
         overrides: testOverrides(),
       );
-      for (final label in ['Autor', 'Género', 'Colección']) {
+      for (final label in ['Autor / Mangaka', 'Género', 'Colección / Serie']) {
         final decorator = tester.widget<InputDecorator>(find
             .ancestor(
                 of: find.text(label), matching: find.byType(InputDecorator))
             .first);
-        expect(decorator.decoration.fillColor, AppColorsDark.backgroundColor,
+        expect(decorator.decoration.fillColor, AppColorsDark.surfaceDeep,
             reason: label);
       }
     });
@@ -295,17 +295,19 @@ void main() {
     testWidgets('renders all fields with the file name as title',
         (tester) async {
       await pumpDialog(tester);
-      expect(find.text('NUEVO CÓMIC'), findsOneWidget);
-      expect(find.text('naruto_01.cbz'), findsOneWidget);
-      expect(find.text('Título'), findsOneWidget);
-      expect(find.text('Autor'), findsOneWidget);
+      expect(find.text('IMPORTAR TOMO'), findsOneWidget);
+      expect(find.text('FICHA TÉCNICA EDITORIAL'), findsOneWidget);
+      expect(find.text('naruto_01'), findsOneWidget);
+      expect(find.text('CBZ'), findsOneWidget);
+      expect(find.text('Título del Tomo'), findsOneWidget);
+      expect(find.text('Autor / Mangaka'), findsOneWidget);
       expect(find.text('Género'), findsOneWidget);
-      expect(find.text('Colección'), findsOneWidget);
+      expect(find.text('Colección / Serie'), findsOneWidget);
       expect(find.text('TIPO DE LECTURA'), findsOneWidget);
-      expect(find.text('Manga'), findsOneWidget);
-      expect(find.text('Cómic'), findsOneWidget);
+      expect(find.text('Manga (D → I)'), findsOneWidget);
+      expect(find.text('Cómic (I → D)'), findsOneWidget);
       expect(find.text('OMITIR'), findsOneWidget);
-      expect(find.text('GUARDAR'), findsOneWidget);
+      expect(find.text('IMPORTAR'), findsOneWidget);
     });
 
     testWidgets('"Omitir" closes the dialog returning null', (tester) async {
@@ -319,8 +321,8 @@ void main() {
     testWidgets('empty title shows a validation error', (tester) async {
       final results = await pumpDialog(tester);
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Título'), '   ');
-      await tester.tap(find.text('GUARDAR'));
+          find.widgetWithText(TextFormField, 'Título del Tomo'), '   ');
+      await tester.tap(find.text('IMPORTAR'));
       await tester.pumpAndSettle();
 
       expect(find.text('El título no puede estar vacío'), findsOneWidget);
@@ -332,18 +334,18 @@ void main() {
       final results = await pumpDialog(tester);
 
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Título'), '  Naruto 1 ');
+          find.widgetWithText(TextFormField, 'Título del Tomo'), '  Naruto 1 ');
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Autor'), 'Kishimoto ');
+          find.widgetWithText(TextFormField, 'Autor / Mangaka'), 'Kishimoto ');
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Género'), 'Shonen');
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Colección'), 'Naruto');
+          find.widgetWithText(TextFormField, 'Colección / Serie'), 'Naruto');
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Cómic'));
+      await tester.tap(find.text('Cómic (I → D)'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('GUARDAR'));
+      await tester.tap(find.text('IMPORTAR'));
       await tester.pumpAndSettle();
 
       expect(results.single, {

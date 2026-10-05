@@ -616,9 +616,31 @@ void main() {
       expect(call['title'], isNull);
     });
 
+    test('markCompleted -> updateComic(isCompleted: true)', () async {
+      await repo.markCompleted(9);
+      final call = captureUpdateComicCalls(db).single;
+      expect(call['id'], 9);
+      expect(call['isCompleted'], true);
+      expect(call['title'], isNull);
+    });
+
     test('deleteComic of an unknown id only deletes the row', () async {
       await repo.deleteComic(3);
       verify(() => db.deleteComic(3)).called(1);
+    });
+
+    test('deleteComic catches FileSystemException and survives', () async {
+      final mockStorage = MockComicStorage();
+      final customRepo = ComicRepositoryImpl(db, storage: mockStorage);
+      when(() => db.getComicById(99)).thenAnswer(
+          (_) async => buildComicModel(id: 99, imagesPath: 'comics/c_99'));
+      when(() => db.deleteComic(99)).thenAnswer((_) async {});
+      when(() => mockStorage.deleteComicFolder('comics/c_99'))
+          .thenThrow(const FileSystemException('permission denied'));
+
+      await expectLater(customRepo.deleteComic(99), completes);
+      verify(() => db.deleteComic(99)).called(1);
+      verify(() => mockStorage.deleteComicFolder('comics/c_99')).called(1);
     });
 
     test('deleteComic also removes the images folder', () async {

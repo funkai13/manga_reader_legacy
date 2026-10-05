@@ -333,4 +333,18 @@ void main() {
       expect(state().value!.map((c) => c.title), ['A', 'B', 'C']);
     });
   });
+
+  group('deleteComic', () {
+    test('deletes via repository and updates state with remaining comics',
+        () async {
+      await loaded();
+      when(() => repo.deleteComic(1)).thenAnswer((_) async {});
+      when(() => repo.getAllComics()).thenAnswer((_) async => [comics[1]]);
+
+      await notifier().deleteComic(1);
+
+      verify(() => repo.deleteComic(1)).called(1);
+      expect(state().value!.map((c) => c.title), ['B']);
+    });
+  });
 }

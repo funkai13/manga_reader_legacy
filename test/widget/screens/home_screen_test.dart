@@ -10,6 +10,8 @@ import 'package:manga_reader/feature/Home/presenter/widgets/comic_card.dart';
 import 'package:manga_reader/feature/Home/presenter/widgets/comic_metadata_dialog.dart';
 import 'package:manga_reader/feature/Home/presenter/widgets/emtpy_comics_screen.dart';
 import 'package:manga_reader/feature/Library/presenter/screens/library_screen.dart';
+import 'package:manga_reader/feature/Reader/presenter/screens/comic_viewer_screen.dart';
+import 'package:manga_reader/core/widgets/neo_loading.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/widget/fakes.dart';
@@ -22,13 +24,18 @@ void main() {
     WidgetTester tester, {
     List<ComicEntity>? comics,
     MockComicRepository? repo,
+    FakeComicViewerController? viewer,
     Size size = kPhoneSize,
   }) async {
     final repository = repo ?? createComicRepository(comics: comics ?? []);
+    final viewerController = viewer ?? FakeComicViewerController();
     await pumpApp(
       tester,
       const HomeScreen(),
-      overrides: testOverrides(comicRepository: repository),
+      overrides: testOverrides(
+        comicRepository: repository,
+        viewerController: () => viewerController,
+      ),
       size: size,
     );
     return repository;
@@ -45,7 +52,8 @@ void main() {
       await pumpHome(tester,
           repo: createComicRepository(
               getAll: () => neverCompletes<ComicEntity>()));
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(NeoLoadingIndicator), findsOneWidget);
+      expect(find.text('CARGANDO TOMOS...'), findsOneWidget);
     });
 
     testWidgets('shows an error message when loading fails', (tester) async {
@@ -53,7 +61,33 @@ void main() {
           repo: createComicRepository(
               getAll: () => Future.error(Exception('boom'))));
       await tester.pumpAndSettle();
-      expect(find.text('Error cargando comics'), findsOneWidget);
+      expect(find.textContaining('Error cargando los tomos'), findsOneWidget);
+    });
+
+    testWidgets('retry button reloads comics when initial load fails',
+        (tester) async {
+      var callCount = 0;
+      final repo = createComicRepository(
+        getAll: () {
+          callCount++;
+          if (callCount == 1) {
+            return Future.error(Exception('boom'));
+          }
+          return Future.value(sampleComics());
+        },
+      );
+      await pumpHome(tester, repo: repo);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Error cargando los tomos'), findsOneWidget);
+      expect(find.text('REINTENTAR'), findsOneWidget);
+
+      await tester.tap(find.text('REINTENTAR'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Error cargando los tomos'), findsNothing);
+      expect(find.byType(ComicCard), findsWidgets);
+      expect(callCount, 2);
     });
 
     testWidgets('shows the empty screen when there are no comics',
@@ -70,11 +104,8 @@ void main() {
       await pumpHome(tester, comics: sampleComics());
       await tester.pumpAndSettle();
 
-      expect(
-        find.byWidgetPredicate(
-            (w) => w is Text && ['Buenos días', 'Buenas tardes', 'Buenas noches'].contains(w.data)),
-        findsOneWidget,
-      );
+      expect(find.text('BIBLIOTECA DE TOMOS'), findsOneWidget);
+      expect(find.textContaining('TANK'), findsOneWidget);
       expect(find.byType(SearchBar), findsOneWidget);
       expect(find.byIcon(Icons.library_books), findsOneWidget);
       expect(find.byIcon(Icons.add), findsOneWidget);
@@ -138,6 +169,32 @@ void main() {
 
       expect(find.byType(LibraryScreen), findsOneWidget);
       expect(find.text('Biblioteca'), findsOneWidget);
+    });
+
+    testWidgets('tapping a comic card in carousel opens ComicViewerScreen',
+        (tester) async {
+      final viewer = FakeComicViewerController();
+      final comics = sampleComics();
+      await pumpHome(tester, comics: comics, viewer: viewer);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(ComicCard).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ComicViewerScreen), findsOneWidget);
+      expect(viewer.loadCalls.single.$2, 1);
+    });
+
+    testWidgets('tapping Inicio bottom navigation tab keeps HomeScreen active',
+        (tester) async {
+      await pumpHome(tester, comics: sampleComics());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.home));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(LibraryScreen), findsNothing);
     });
   });
 
@@ -216,22 +273,22 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ComicMetadataDialog), findsOneWidget);
-      expect(find.text('naruto_01.cbz'), findsOneWidget);
+      expect(find.text('naruto_01'), findsOneWidget);
       final captured = verify(() => repo.addComic(captureAny())).captured.single
           as ComicEntity;
       expect(captured.title, 'naruto_01.cbz');
       expect(captured.filePath, '/fake/naruto_01.cbz');
 
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Autor'), 'Kishimoto');
+          find.widgetWithText(TextFormField, 'Autor / Mangaka'), 'Kishimoto');
       await tester.pumpAndSettle();
-      await tester.tap(find.text('GUARDAR'));
+      await tester.tap(find.text('IMPORTAR'));
       await tester.pumpAndSettle();
 
       expect(find.byType(ComicMetadataDialog), findsNothing);
       verify(() => repo.updateComicMetadata(
             id: 99,
-            title: 'naruto_01.cbz',
+            title: 'naruto_01',
             author: 'Kishimoto',
             // Empty fields keep what ComicInfo.xml provided.
             genre: null,
@@ -253,13 +310,14 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('GUARDAR'));
+      await tester.tap(find.text('IMPORTAR'));
       // The spinner animates forever, so pumpAndSettle can't be used here.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byType(ComicMetadataDialog), findsNothing);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(NeoLoadingIndicator), findsOneWidget);
+      expect(find.text('EXTRAYENDO TOMO...'), findsOneWidget);
       verifyNever(() => repo.updateComicMetadata(
             id: any(named: 'id'),
             title: any(named: 'title'),
@@ -272,10 +330,10 @@ void main() {
       extraction.complete(sampleComics().first.copyWith(id: 77));
       await tester.pumpAndSettle();
 
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(NeoLoadingIndicator), findsNothing);
       verify(() => repo.updateComicMetadata(
             id: 77,
-            title: 'big.cbz',
+            title: 'big',
             author: null,
             genre: null,
             collection: null,

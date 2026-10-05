@@ -8,6 +8,7 @@ import 'package:manga_reader/feature/Reader/presenter/screens/comic_viewer_scree
 import 'package:manga_reader/feature/Reader/presenter/widgets/paged_reader.dart';
 import 'package:manga_reader/feature/Reader/presenter/widgets/reader_chrome.dart';
 import 'package:manga_reader/feature/Reader/presenter/widgets/vertical_reader.dart';
+import 'package:manga_reader/core/widgets/neo_loading.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/widget/fakes.dart';
@@ -97,21 +98,21 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(NeoLoadingIndicator), findsOneWidget);
     });
 
     testWidgets('shows an error with a way back', (tester) async {
       await pumpViewer(tester,
           viewer: FakeComicViewerController(error: 'sin permisos'));
       expect(find.textContaining('sin permisos'), findsOneWidget);
-      await tester.tap(find.text('Volver'));
+      await tester.tap(find.text('VOLVER'));
       await tester.pumpAndSettle();
       expect(find.byType(ComicViewerScreen), findsNothing);
     });
 
     testWidgets('a comic without pages says so', (tester) async {
       await pumpViewer(tester, viewer: FakeComicViewerController(images: []));
-      expect(find.text('Este cómic no tiene páginas.'), findsOneWidget);
+      expect(find.text('Este cómic no tiene páginas disponibles.'), findsOneWidget);
     });
 
     testWidgets('opens at the saved page', (tester) async {
@@ -164,7 +165,7 @@ void main() {
       await tapAt(tester, 0.5);
       expect(controlsVisible(tester), isTrue);
       expect(find.text('Akira v01'), findsOneWidget, reason: 'no extension');
-      expect(find.text('Página 1 de 5'), findsOneWidget);
+      expect(find.text('P. 001 / 005'), findsOneWidget);
 
       await tapAt(tester, 0.5);
       expect(controlsVisible(tester), isFalse);
@@ -300,7 +301,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BottomSheet), findsNothing);
-      expect(find.text('Página 4 de 5'), findsOneWidget);
+      expect(find.text('P. 004 / 005'), findsOneWidget);
     });
 
     testWidgets('the slider previews while dragging and jumps on release',
@@ -314,11 +315,11 @@ void main() {
       await gesture.moveTo(Offset(rect.right - 2, rect.center.dy));
       await tester.pump();
       expect(find.text('Página 5'), findsOneWidget, reason: 'preview');
-      expect(find.text('Página 1 de 5'), findsOneWidget, reason: 'not yet');
+      expect(find.text('P. 001 / 005'), findsOneWidget, reason: 'not yet');
 
       await gesture.up();
       await tester.pumpAndSettle();
-      expect(find.text('Página 5 de 5'), findsOneWidget);
+      expect(find.text('P. 005 / 005'), findsOneWidget);
       await flushProgress(tester);
       verify(() => repo.addBookMark(7, 4)).called(1);
     });
@@ -349,7 +350,7 @@ void main() {
 
       expect(tester.widget<PagedReader>(find.byType(PagedReader)).rightToLeft,
           isTrue);
-      expect(find.text('Página 2 de 5'), findsOneWidget);
+      expect(find.text('P. 002 / 005'), findsOneWidget);
       verify(() => repo.updateComicMetadata(
             id: 7,
             title: null,
@@ -368,7 +369,7 @@ void main() {
 
       expect(find.byType(VerticalReader), findsOneWidget);
       expect(find.byType(PagedReader), findsNothing);
-      expect(find.text('Página 2 de 5'), findsOneWidget);
+      expect(find.text('P. 002 / 005'), findsOneWidget);
       verify(() => repo.updateComicMetadata(
             id: 7,
             title: null,

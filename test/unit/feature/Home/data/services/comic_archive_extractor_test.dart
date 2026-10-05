@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:manga_reader/feature/Home/data/services/comic_archive_extractor.dart';
+import 'package:manga_reader/feature/Home/domain/exceptions/comic_exceptions.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../../helpers/archive_builder.dart';
@@ -92,6 +93,63 @@ void main() {
       expect(info.writer, isNull);
       expect(info.series, isNull);
       expect(parseComicInfo('<ComicInfo><Writer>Oda'), isNull);
+    });
+  });
+
+  group('extract', () {
+    test('nonexistent file throws UnsupportedComicException', () async {
+      final ghostPath = p.join(sandbox.path, 'ghost.cbz');
+      final outDir = p.join(sandbox.path, 'out_ghost');
+      await expectLater(
+        ComicArchiveExtractor().extract(ghostPath, outDir),
+        throwsA(isA<UnsupportedComicException>().having(
+          (e) => e.message,
+          'message',
+          contains('No se encontró el archivo del cómic'),
+        )),
+      );
+    });
+
+    test('unknown archive kind throws UnsupportedComicException', () async {
+      final invalidFile = writeRawFile(sandbox, 'invalid.cbz', [1, 2, 3, 4, 5]);
+      final outDir = p.join(sandbox.path, 'out_invalid');
+      await expectLater(
+        ComicArchiveExtractor().extract(invalidFile.path, outDir),
+        throwsA(isA<UnsupportedComicException>().having(
+          (e) => e.message,
+          'message',
+          contains('El archivo no es un CBZ/CBR válido o está corrupto'),
+        )),
+      );
+    });
+
+    test('zip archive without supported pages throws UnsupportedComicException',
+        () async {
+      final emptyZip = buildArchive(sandbox, 'empty.cbz', {
+        'notes.txt': 'no images here',
+        'sub/data.json': '{}',
+      });
+      final outDir = p.join(sandbox.path, 'out_empty');
+      await expectLater(
+        ComicArchiveExtractor().extract(emptyZip.path, outDir),
+        throwsA(isA<UnsupportedComicException>().having(
+          (e) => e.message,
+          'message',
+          contains('El archivo no contiene imágenes soportadas'),
+        )),
+      );
+    });
+
+    test('natural sort compares filenames with different segment lengths',
+        () async {
+      final zip = buildArchive(sandbox, 'lengths.cbz', {
+        'page.jpg': fakeJpg,
+        'page_extra.jpg': fakeJpg,
+      });
+      final outDir = p.join(sandbox.path, 'out_lengths');
+      final result =
+          await ComicArchiveExtractor().extract(zip.path, outDir);
+      expect(result.pages.length, 2);
     });
   });
 }

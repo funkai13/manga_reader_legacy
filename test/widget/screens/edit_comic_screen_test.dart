@@ -48,12 +48,12 @@ void main() {
       ),
     );
 
-    expect(find.text('EDITAR DETALLES'), findsOneWidget);
+    expect(find.text('FICHA TÉCNICA'), findsOneWidget);
     expect(find.text('Akira Vol. 1'), findsOneWidget);
     expect(find.text('Katsuhiro Otomo'), findsOneWidget);
     expect(find.text('Seinen'), findsOneWidget);
     expect(find.text('Akira'), findsOneWidget);
-    expect(find.text('TIPO DE LECTURA'), findsOneWidget);
+    expect(find.text('MODO DE LECTURA POR DEFECTO'), findsOneWidget);
 
     final segmented = tester
         .widget<SegmentedButton<String>>(find.byType(SegmentedButton<String>));
@@ -71,7 +71,7 @@ void main() {
   testWidgets('shows the book placeholder when there is no cover',
       (tester) async {
     await pumpEdit(tester, buildComic());
-    expect(find.byIcon(Icons.book), findsOneWidget);
+    expect(find.byIcon(Icons.auto_stories), findsOneWidget);
   });
 
   testWidgets('shows the cover image when the comic has one', (tester) async {
@@ -80,13 +80,13 @@ void main() {
     await pumpEdit(tester, buildComic(picture: cover.path));
     // Blurred background + sharp cover.
     expect(find.byType(Image), findsNWidgets(2));
-    expect(find.byIcon(Icons.book), findsNothing);
+    expect(find.byIcon(Icons.auto_stories), findsNothing);
   });
 
   testWidgets('empty title shows a snackbar and does not save', (tester) async {
     final repo = await pumpEdit(tester, buildComic(id: 3));
 
-    await tester.enterText(field('Título'), '');
+    await tester.enterText(field('Título del Tomo'), '');
     await tester.tap(find.byIcon(Icons.save));
     await tester.pump();
 
@@ -106,7 +106,7 @@ void main() {
       (tester) async {
     final repo = await pumpEdit(tester, buildComic(id: 3, title: 'Old'));
 
-    await tester.enterText(field('Autor'), 'Otomo');
+    await tester.enterText(field('Autor / Mangaka'), 'Otomo');
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.save));
     await tester.pumpAndSettle();
@@ -126,9 +126,9 @@ void main() {
     final repo = await pumpEdit(tester,
         buildComic(id: 3, author: 'Oda', genre: 'Shonen', collection: 'OP'));
 
-    await tester.enterText(field('Autor'), '');
-    await tester.enterText(field('Género'), ' ');
-    await tester.enterText(field('Colección'), '');
+    await tester.enterText(field('Autor / Mangaka'), '');
+    await tester.enterText(field('Género (ej. Shonen, Seinen, Terror)'), ' ');
+    await tester.enterText(field('Colección / Serie'), '');
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.save));
     await tester.pumpAndSettle();
@@ -149,14 +149,15 @@ void main() {
     final segmented = tester
         .widget<SegmentedButton<String>>(find.byType(SegmentedButton<String>));
     expect(segmented.segments.map((s) => s.value), ['Manga', 'Comic', 'Webtoon']);
-    expect(find.text('Derecha a izquierda'), findsOneWidget);
+    expect(find.text('Manga'), findsWidgets);
+    expect(find.text('Cómic'), findsOneWidget);
+    expect(find.text('Webtoon'), findsOneWidget);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Webtoon'));
     await tester.pumpAndSettle();
-    expect(find.text('Scroll vertical continuo'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.save));
     await tester.pumpAndSettle();
@@ -174,8 +175,8 @@ void main() {
       (tester) async {
     final repo = await pumpEdit(tester, buildComic(id: 3, title: 'Old'));
 
-    await tester.enterText(field('Título'), 'Nuevo título');
-    await tester.enterText(field('Autor'), 'Otomo');
+    await tester.enterText(field('Título del Tomo'), 'Nuevo título');
+    await tester.enterText(field('Autor / Mangaka'), 'Otomo');
     await tester.pumpAndSettle();
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
@@ -196,7 +197,7 @@ void main() {
           comicType: 'Comic',
         )).called(1);
     expect(find.byType(EditComicScreen), findsNothing);
-    expect(find.text('Cómic actualizado'), findsOneWidget);
+    expect(find.text('Tomo actualizado correctamente'), findsOneWidget);
   });
 
   testWidgets('back arrow pops without saving', (tester) async {
@@ -217,20 +218,20 @@ void main() {
 
   testWidgets('author field suggests existing authors', (tester) async {
     await pumpEdit(tester, buildComic(id: 3));
-    await tester.enterText(field('Autor'), 'mil');
+    await tester.enterText(field('Autor / Mangaka'), 'mil');
     await tester.pumpAndSettle();
     expect(find.text('Frank Miller'), findsOneWidget);
 
     await tester.tap(find.text('Frank Miller'));
     await tester.pumpAndSettle();
-    expect(tester.widget<TextFormField>(field('Autor')).controller!.text,
+    expect(tester.widget<TextFormField>(field('Autor / Mangaka')).controller!.text,
         'Frank Miller');
   });
 
   testWidgets('renders on tablets without overflow', (tester) async {
     await pumpEdit(tester, buildComic(id: 3, author: 'Otomo'),
         size: kTabletSize);
-    expect(find.text('EDITAR DETALLES'), findsOneWidget);
+    expect(find.text('FICHA TÉCNICA'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -413,8 +413,6 @@ void main() {
     testWidgets('renders pages vertically and supports navigation',
         (tester) async {
       final key = GlobalKey<VerticalReaderState>();
-      int currentPage = 0;
-
       await pumpApp(
         tester,
         VerticalReader(
@@ -422,7 +420,7 @@ void main() {
           pages: pages,
           initialPage: 0,
           endPage: const Text('END_PAGE_CONTENT'),
-          onPageChanged: (p) => currentPage = p,
+          onPageChanged: (_) {},
         ),
         wrapInScaffold: true,
       );

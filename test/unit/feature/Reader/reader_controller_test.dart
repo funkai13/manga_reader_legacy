@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,7 +7,9 @@ import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Home/domain/entity/reading_mode.dart';
 import 'package:manga_reader/feature/Reader/presenter/reader_controller.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:path/path.dart' as p;
 
+import '../../helpers/archive_builder.dart';
 import '../../helpers/comic_fixtures.dart';
 import '../../helpers/mocks.dart';
 import '../../helpers/riverpod_utils.dart';
@@ -185,6 +189,61 @@ void main() {
       notifier.onPageChanged(2, totalPages: 10);
       async.elapse(ReaderController.persistDelay * 2);
       verify(() => repo.addBookMark(3, 2)).called(1);
+    });
+  });
+
+  group('ReaderState', () {
+    test('copyWith updates specified fields and preserves existing values', () {
+      const state = ReaderState(
+        page: 2,
+        mode: ReadingMode.leftToRight,
+        controlsVisible: true,
+      );
+
+      final updatedPage = state.copyWith(page: 5);
+      expect(updatedPage.page, 5);
+      expect(updatedPage.mode, ReadingMode.leftToRight);
+      expect(updatedPage.controlsVisible, isTrue);
+
+      final updatedMode = state.copyWith(mode: ReadingMode.vertical);
+      expect(updatedMode.page, 2);
+      expect(updatedMode.mode, ReadingMode.vertical);
+      expect(updatedMode.controlsVisible, isTrue);
+
+      final updatedControls = state.copyWith(controlsVisible: false);
+      expect(updatedControls.page, 2);
+      expect(updatedControls.mode, ReadingMode.leftToRight);
+      expect(updatedControls.controlsVisible, isFalse);
+    });
+  });
+
+  group('readerPagesProvider', () {
+    late Directory tempDir;
+
+    setUp(() {
+      tempDir = createTempDir('reader_pages_');
+    });
+
+    tearDown(() {
+      deleteQuietly(tempDir);
+    });
+
+    test('lists and sorts comic pages filtering unsupported files', () async {
+      File(p.join(tempDir.path, '0002.png')).writeAsBytesSync([1]);
+      File(p.join(tempDir.path, '0001.jpg')).writeAsBytesSync([1]);
+      File(p.join(tempDir.path, '0010.webp')).writeAsBytesSync([1]);
+      File(p.join(tempDir.path, 'notes.txt')).writeAsStringSync('text');
+      File(p.join(tempDir.path, 'data.json')).writeAsStringSync('{}');
+
+      final comicEntity = buildComicEntity(imagesPath: tempDir.path);
+      final pages =
+          await container.read(readerPagesProvider(comicEntity).future);
+
+      expect(pages.map((f) => p.basename(f.path)).toList(), [
+        '0001.jpg',
+        '0002.png',
+        '0010.webp',
+      ]);
     });
   });
 }

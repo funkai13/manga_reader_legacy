@@ -199,7 +199,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(RenameCategoryDialog), findsOneWidget);
-      expect(find.text('Renombrar author'), findsOneWidget);
+      expect(find.text('Renombrar Autor'), findsOneWidget);
     });
   });
 
@@ -268,7 +268,7 @@ void main() {
       await tester.longPress(find.text('Katsuhiro Otomo'));
       await tester.pumpAndSettle();
       expect(find.byType(RenameCategoryDialog), findsOneWidget);
-      expect(find.text('Renombrar genre'), findsOneWidget);
+      expect(find.text('Renombrar Género'), findsOneWidget);
     });
   });
 
@@ -302,7 +302,7 @@ void main() {
 
     testWidgets('pre-fills the current name', (tester) async {
       await pumpDialog(tester);
-      expect(find.text('Renombrar author'), findsOneWidget);
+      expect(find.text('Renombrar Autor'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'Oda'), findsOneWidget);
       expect(find.text('Nuevo nombre'), findsOneWidget);
     });
