@@ -94,6 +94,11 @@ void main() {
       await tester.pumpAndSettle();
       verify(() => library.getGenres()).called(1);
 
+      await tester.scrollUntilVisible(
+        find.text('Colecciones'),
+        50,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('Colecciones'));
       await tester.pumpAndSettle();
       verify(() => library.getCollections()).called(1);

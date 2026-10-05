@@ -61,7 +61,7 @@ void main() {
       await pumpHome(tester, comics: []);
       await settleEmpty(tester);
       expect(find.byType(EmptyComicsScreen), findsOneWidget);
-      expect(find.text('Sin comics aún'), findsOneWidget);
+      expect(find.text('SIN COMICS AÚN'), findsOneWidget);
       expect(find.text('Bienvenido'), findsNothing);
     });
 
@@ -70,25 +70,29 @@ void main() {
       await pumpHome(tester, comics: sampleComics());
       await tester.pumpAndSettle();
 
-      expect(find.text('Bienvenido'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+            (w) => w is Text && ['Buenos días', 'Buenas tardes', 'Buenas noches'].contains(w.data)),
+        findsOneWidget,
+      );
       expect(find.byType(SearchBar), findsOneWidget);
       expect(find.byIcon(Icons.library_books), findsOneWidget);
       expect(find.byIcon(Icons.add), findsOneWidget);
-      expect(find.text('Continuar Leyendo'), findsOneWidget);
-      expect(find.text('Recientemente Agregados'), findsOneWidget);
+      expect(find.text('CONTINUAR LEYENDO'), findsOneWidget);
+      expect(find.text('RECIENTEMENTE AGREGADOS'), findsOneWidget);
       expect(find.byType(ComicCard), findsWidgets);
 
-      await tester.scrollUntilVisible(find.text('Sin Leer'), 200,
+      await tester.scrollUntilVisible(find.text('SIN LEER'), 200,
           scrollable: find.byType(Scrollable).first);
-      expect(find.text('Sin Leer'), findsOneWidget);
+      expect(find.text('SIN LEER'), findsOneWidget);
     });
 
     testWidgets('hides "Continuar Leyendo" when nothing is in progress',
         (tester) async {
       await pumpHome(tester, comics: [buildComic(id: 1), buildComic(id: 2)]);
       await tester.pumpAndSettle();
-      expect(find.text('Continuar Leyendo'), findsNothing);
-      expect(find.text('Recientemente Agregados'), findsOneWidget);
+      expect(find.text('CONTINUAR LEYENDO'), findsNothing);
+      expect(find.text('RECIENTEMENTE AGREGADOS'), findsOneWidget);
     });
 
     testWidgets('"Recientemente Agregados" shows at most 6 comics',
@@ -98,7 +102,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final carousel = find.ancestor(
-        of: find.text('Recientemente Agregados'),
+        of: find.text('RECIENTEMENTE AGREGADOS'),
         matching: find.byType(Column),
       );
       final list = tester.widget<ListView>(find
@@ -112,7 +116,7 @@ void main() {
       await tester.pumpAndSettle();
       verify(() => repo.getAllComics()).called(1);
 
-      await tester.fling(find.text('Bienvenido'), const Offset(0, 500), 1000);
+      await tester.fling(find.byType(SearchBar), const Offset(0, 500), 1000);
       await tester.pumpAndSettle();
       verify(() => repo.getAllComics()).called(1);
     });
@@ -120,7 +124,7 @@ void main() {
     testWidgets('uses a taller search bar on tablets', (tester) async {
       await pumpHome(tester, comics: sampleComics(), size: kTabletSize);
       await tester.pumpAndSettle();
-      expect(tester.getSize(find.byType(SearchBar)).height, 80);
+      expect(tester.getSize(find.byType(SearchBar)).height, 64);
     });
   });
 
@@ -221,7 +225,7 @@ void main() {
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Autor'), 'Kishimoto');
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Guardar'));
+      await tester.tap(find.text('GUARDAR'));
       await tester.pumpAndSettle();
 
       expect(find.byType(ComicMetadataDialog), findsNothing);
@@ -249,7 +253,7 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Guardar'));
+      await tester.tap(find.text('GUARDAR'));
       // The spinner animates forever, so pumpAndSettle can't be used here.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -288,7 +292,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.add));
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Omitir'));
+      await tester.tap(find.text('OMITIR'));
       await tester.pumpAndSettle();
 
       verifyNever(() => repo.updateComicMetadata(
@@ -394,7 +398,7 @@ void main() {
       await pumpHome(tester, comics: []);
       await settleEmpty(tester);
 
-      await tester.tap(find.text('Agregar Comic'));
+      await tester.tap(find.text('AGREGAR COMIC'));
       await tester.pumpAndSettle();
 
       expect(picker.calls, 1);

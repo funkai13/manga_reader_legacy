@@ -41,15 +41,15 @@ void main() {
       await tester.tap(find.text('show'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Dialog), findsOneWidget);
       expect(find.text('Error'), findsOneWidget);
       expect(find.text('Algo salió mal'), findsOneWidget);
       expect(completed, isFalse);
 
-      await tester.tap(find.text('Aceptar'));
+      await tester.tap(find.text('ACEPTAR'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(Dialog), findsNothing);
       expect(completed, isTrue);
     });
 
@@ -65,7 +65,7 @@ void main() {
       expect(find.text('Info'), findsOneWidget);
       expect(find.text('Todo bien'), findsOneWidget);
 
-      await tester.tap(find.text('Aceptar'));
+      await tester.tap(find.text('ACEPTAR'));
       await tester.pumpAndSettle();
       expect(find.text('Info'), findsNothing);
     });

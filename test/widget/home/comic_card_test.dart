@@ -36,14 +36,14 @@ void main() {
   group('ComicCard status chip', () {
     testWidgets('shows "Nuevo" for an unread comic', (tester) async {
       await pumpCard(tester, buildComic());
-      expect(find.text('Nuevo'), findsOneWidget);
+      expect(find.text('NUEVO'), findsOneWidget);
       expect(find.textContaining('Pág.'), findsNothing);
     });
 
     testWidgets('shows "Leyendo" and the current page while reading',
         (tester) async {
       await pumpCard(tester, buildComic(isReading: true, currentReadPage: 4));
-      expect(find.text('Leyendo'), findsOneWidget);
+      expect(find.text('LEYENDO'), findsOneWidget);
       expect(find.text('Pág. 5'), findsOneWidget);
     });
 
@@ -53,17 +53,17 @@ void main() {
         tester,
         buildComic(isCompleted: true, isReading: true, currentReadPage: 9),
       );
-      expect(find.text('Completado'), findsOneWidget);
-      expect(find.text('Leyendo'), findsNothing);
+      expect(find.text('COMPLETADO'), findsOneWidget);
+      expect(find.text('LEYENDO'), findsNothing);
       expect(find.textContaining('Pág.'), findsNothing);
     });
 
     testWidgets('shows no chip for a started comic that is not reading',
         (tester) async {
       await pumpCard(tester, buildComic(currentReadPage: 2));
-      expect(find.text('Nuevo'), findsNothing);
-      expect(find.text('Leyendo'), findsNothing);
-      expect(find.text('Completado'), findsNothing);
+      expect(find.text('NUEVO'), findsNothing);
+      expect(find.text('LEYENDO'), findsNothing);
+      expect(find.text('COMPLETADO'), findsNothing);
       expect(find.text('Pág. 3'), findsOneWidget);
     });
   });

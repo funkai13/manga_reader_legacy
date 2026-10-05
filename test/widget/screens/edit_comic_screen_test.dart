@@ -48,12 +48,12 @@ void main() {
       ),
     );
 
-    expect(find.text('Editar Detalles'), findsOneWidget);
+    expect(find.text('EDITAR DETALLES'), findsOneWidget);
     expect(find.text('Akira Vol. 1'), findsOneWidget);
     expect(find.text('Katsuhiro Otomo'), findsOneWidget);
     expect(find.text('Seinen'), findsOneWidget);
     expect(find.text('Akira'), findsOneWidget);
-    expect(find.text('Tipo de Lectura'), findsOneWidget);
+    expect(find.text('TIPO DE LECTURA'), findsOneWidget);
 
     final segmented = tester
         .widget<SegmentedButton<String>>(find.byType(SegmentedButton<String>));
@@ -151,7 +151,9 @@ void main() {
     expect(segmented.segments.map((s) => s.value), ['Manga', 'Comic', 'Webtoon']);
     expect(find.text('Derecha a izquierda'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Webtoon'));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Webtoon'));
     await tester.pumpAndSettle();
     expect(find.text('Scroll vertical continuo'), findsOneWidget);
@@ -175,7 +177,10 @@ void main() {
     await tester.enterText(field('Título'), 'Nuevo título');
     await tester.enterText(field('Autor'), 'Otomo');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Cómic'));
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Cómic'));
     await tester.pumpAndSettle();
 
@@ -225,7 +230,7 @@ void main() {
   testWidgets('renders on tablets without overflow', (tester) async {
     await pumpEdit(tester, buildComic(id: 3, author: 'Otomo'),
         size: kTabletSize);
-    expect(find.text('Editar Detalles'), findsOneWidget);
+    expect(find.text('EDITAR DETALLES'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

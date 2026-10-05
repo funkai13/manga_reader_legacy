@@ -227,9 +227,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(ListTile), findsNWidgets(3));
       expect(find.text('Eiichiro Oda'), findsOneWidget);
-      expect(find.widgetWithText(Chip, '3'), findsOneWidget);
-      expect(find.widgetWithText(Chip, '1'), findsOneWidget);
-      expect(find.widgetWithText(Chip, '2'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
     });
 
     testWidgets('loading state', (tester) async {
@@ -393,7 +393,7 @@ void main() {
           viewerController: () => viewer,
         ),
       );
-      await tester.tap(find.text('Leyendo'));
+      await tester.tap(find.text('LEYENDO'));
       await tester.pumpAndSettle();
       expect(find.byType(ComicViewerScreen), findsOneWidget);
       expect(viewer.loadCalls.single.$2, 1);

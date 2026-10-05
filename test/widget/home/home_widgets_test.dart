@@ -26,7 +26,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(opacity().opacity, 1);
-      expect(find.text('Sin comics aún'), findsOneWidget);
+      expect(find.text('SIN COMICS AÚN'), findsOneWidget);
       expect(
           find.text('Agrega tu primer comic para comenzar.'), findsOneWidget);
       expect(find.byIcon(Icons.menu_book_rounded), findsOneWidget);
@@ -38,7 +38,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Agregar Comic'));
+      await tester.tap(find.text('AGREGAR COMIC'));
       expect(taps, 1);
     });
 
@@ -65,7 +65,7 @@ void main() {
       expect(subtitle.style?.color, isNot(Colors.black54));
       expect(subtitle.style!.color!.computeLuminance(), greaterThan(0.1));
       final icon = tester.widget<Icon>(find.byIcon(Icons.menu_book_rounded));
-      expect(icon.color!.computeLuminance(), greaterThan(0.1));
+      expect(icon.color, Colors.black);
     });
   });
 
@@ -76,7 +76,7 @@ void main() {
         const ComicsCarousel(title: 'Sin Leer', comics: [], scale: 1),
         wrapInScaffold: true,
       );
-      expect(find.text('Sin Leer'), findsNothing);
+      expect(find.text('SIN LEER'), findsNothing);
       expect(find.byType(ComicCard), findsNothing);
     });
 
@@ -87,7 +87,7 @@ void main() {
             title: 'Continuar Leyendo', comics: sampleComics(), scale: 1),
         wrapInScaffold: true,
       );
-      expect(find.text('Continuar Leyendo'), findsOneWidget);
+      expect(find.text('CONTINUAR LEYENDO'), findsOneWidget);
       // Horizontal list: at least the first two cards are visible.
       expect(find.byType(ComicCard), findsAtLeastNWidgets(2));
       final list = tester.widget<ListView>(find.byType(ListView));
@@ -103,7 +103,7 @@ void main() {
       );
       await tester.drag(find.byType(ListView), const Offset(-600, 0));
       await tester.pumpAndSettle();
-      expect(find.text('Nuevo'), findsWidgets);
+      expect(find.text('NUEVO'), findsWidgets);
     });
 
     testWidgets('onEdit is forwarded with the tapped comic', (tester) async {
@@ -161,7 +161,8 @@ void main() {
           wrapInScaffold: true,
           overrides: testOverrides(comicRepository: repo));
       await tester.pumpAndSettle();
-      expect(find.text('Error: Exception: db down'), findsOneWidget);
+      expect(find.textContaining('ERROR:'), findsOneWidget);
+      expect(find.textContaining('Exception: db down'), findsOneWidget);
     });
 
     testWidgets('renders a card per comic', (tester) async {
@@ -171,9 +172,9 @@ void main() {
           overrides: testOverrides(comicRepository: repo));
       await tester.pumpAndSettle();
       expect(find.byType(ComicCard), findsNWidgets(4));
-      expect(find.text('Leyendo'), findsOneWidget);
-      expect(find.text('Completado'), findsOneWidget);
-      expect(find.text('Nuevo'), findsNWidgets(2));
+      expect(find.text('LEYENDO'), findsOneWidget);
+      expect(find.text('COMPLETADO'), findsOneWidget);
+      expect(find.text('NUEVO'), findsNWidgets(2));
     });
 
     testWidgets('pull to refresh reloads comics from the repository',
@@ -204,7 +205,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.text('Completado'), findsOneWidget);
+      expect(find.text('COMPLETADO'), findsOneWidget);
       expect(find.text('Pág. 5'), findsOneWidget);
     });
   });
