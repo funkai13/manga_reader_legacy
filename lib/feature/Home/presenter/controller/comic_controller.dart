@@ -188,6 +188,14 @@ class ComicController extends AsyncNotifier<List<ComicEntity>> {
     if (!ref.mounted) return;
     state = AsyncData(updatedList);
   }
+
+  Future<void> deleteComic(int id) async {
+    await _comicRepository.deleteComic(id);
+    if (!ref.mounted) return;
+    final updatedList = await _comicRepository.getAllComics();
+    if (!ref.mounted) return;
+    state = AsyncData(updatedList);
+  }
 }
 
 final comicControllerProvider =

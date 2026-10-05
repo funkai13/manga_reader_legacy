@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:manga_reader/core/theme/colors.dart';
+import 'package:manga_reader/core/theme/typography.dart';
+import 'package:manga_reader/core/utils/constants.dart';
 import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 import 'package:manga_reader/feature/Library/domain/entities/category_entity.dart';
-// Keeping import per user request
-import 'package:google_fonts/google_fonts.dart';
 
 class CategoryCard extends StatelessWidget {
   final CategoryEntity category;
@@ -22,12 +23,10 @@ class CategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
-    final cardColor = isDark ? const Color(0xFF252542) : const Color(0xFFFFFFFF);
-    final shadowColor = isDark ? const Color(0xFF000000) : const Color(0xFF1A1A2E);
-    final accentColor = const Color(0xFFFFE156);
-    final textColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+    final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
+    final cardColor = isDark ? AppColorsDark.surfaceColor : AppColorsLight.cardColor;
+    final shadowColor = isDark ? NeoColors.darkShadow : NeoColors.hardShadowColor;
+    final textColor = isDark ? AppColorsDark.textColor : AppColorsLight.textColor;
 
     return GestureDetector(
       onTap: onTap,
@@ -36,15 +35,15 @@ class CategoryCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: cardColor,
-            borderRadius: BorderRadius.circular(8.r * scale),
+            borderRadius: BorderRadius.circular(NeoConstants.borderRadius * scale),
             border: Border.all(
               color: borderColor,
-              width: 2.5,
+              width: NeoConstants.borderWidth,
             ),
             boxShadow: [
               BoxShadow(
                 color: shadowColor,
-                offset: const Offset(4, 4),
+                offset: NeoConstants.shadowOffset,
                 blurRadius: 0,
               ),
             ],
@@ -53,30 +52,31 @@ class CategoryCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Background Image
+              // Background Cover
               if (category.coverPath != null)
                 FileThumbnail(
                   category.coverPath!,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
-                    color: cardColor,
+                    color: isDark ? AppColorsDark.surfaceDeep : AppColorsLight.surfaceDeep,
                     child: Icon(
                       Icons.image_not_supported,
-                      color: textColor.withValues(alpha: 0.5),
+                      color: textColor.withValues(alpha: 0.3),
+                      size: 36.sp * scale,
                     ),
                   ),
                 )
               else
                 Container(
-                  color: cardColor,
+                  color: isDark ? AppColorsDark.surfaceDeep : AppColorsLight.surfaceDeep,
                   child: Icon(
                     Icons.category,
-                    size: 48.sp * scale,
-                    color: textColor.withValues(alpha: 0.2),
+                    size: 44.sp * scale,
+                    color: textColor.withValues(alpha: 0.3),
                   ),
                 ),
 
-              // Gradient Overlay
+              // Ink Gradient Overlay
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -84,51 +84,49 @@ class CategoryCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withValues(alpha: 0.9),
+                      (isDark ? const Color(0xFF161719) : const Color(0xFF121316))
+                          .withValues(alpha: 0.92),
                     ],
-                    stops: const [0.4, 1.0],
+                    stops: const [0.35, 1.0],
                   ),
                 ),
               ),
 
-              // Content
+              // Title and count badge
               Padding(
-                padding: EdgeInsets.all(12.w * scale),
+                padding: EdgeInsets.all(10.w * scale),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       category.name,
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 16.sp * scale,
-                        fontWeight: FontWeight.w900,
+                      style: AppTypography.heading(
+                        fontSize: 14.sp * scale,
+                        fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 8.h * scale),
+                    SizedBox(height: 6.h * scale),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6.w * scale,
+                        vertical: 3.h * scale,
+                      ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4ECDC4), // Cyan badge
-                        border: Border.all(color: Colors.black, width: 2),
-                        borderRadius: BorderRadius.circular(4.r),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black,
-                            offset: Offset(2, 2),
-                            blurRadius: 0,
-                          ),
-                        ],
+                        color: AppColorsLight.indigo,
+                        borderRadius: BorderRadius.circular(2.r),
+                        border: Border.all(color: Colors.black54, width: 1),
                       ),
                       child: Text(
                         '${category.count} cómics',
-                        style: GoogleFonts.spaceGrotesk(
-                          fontSize: 12.sp * scale,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                        style: AppTypography.mono(
+                          fontSize: 10.sp * scale,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
@@ -136,31 +134,31 @@ class CategoryCard extends StatelessWidget {
                 ),
               ),
 
-              // Edit Badge
+              // Edit Action Badge
               if (onEdit != null)
                 Positioned(
-                  top: 8.h * scale,
-                  right: 8.w * scale,
+                  top: 7.h * scale,
+                  right: 7.w * scale,
                   child: GestureDetector(
                     onTap: onEdit,
                     child: Container(
-                      padding: EdgeInsets.all(8.w * scale),
+                      padding: EdgeInsets.all(6.w * scale),
                       decoration: BoxDecoration(
-                        color: accentColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black, width: 2),
+                        color: AppColorsLight.terracotta,
+                        borderRadius: BorderRadius.circular(2.r),
+                        border: Border.all(color: Colors.black, width: 1.5),
                         boxShadow: const [
                           BoxShadow(
-                            color: Colors.black,
-                            offset: Offset(2, 2),
+                            color: Colors.black45,
+                            offset: Offset(1.5, 1.5),
                             blurRadius: 0,
                           ),
                         ],
                       ),
                       child: Icon(
                         Icons.edit,
-                        size: 16.sp * scale,
-                        color: Colors.black,
+                        size: 13.sp * scale,
+                        color: Colors.white,
                       ),
                     ),
                   ),

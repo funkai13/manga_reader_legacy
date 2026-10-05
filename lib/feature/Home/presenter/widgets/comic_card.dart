@@ -1,9 +1,11 @@
-import 'package:manga_reader/core/widgets/file_thumbnail.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:manga_reader/core/theme/colors.dart';
+import 'package:manga_reader/core/theme/typography.dart';
+import 'package:manga_reader/core/utils/constants.dart';
+import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
+import 'package:path/path.dart' as p;
 
 class ComicCard extends StatelessWidget {
   final ComicEntity comic;
@@ -17,32 +19,47 @@ class ComicCard extends StatelessWidget {
     this.onEdit,
   });
 
+  String? _formatBadge() {
+    final ext = p.extension(comic.title).toLowerCase();
+    if (ext == '.cbz') return 'CBZ';
+    if (ext == '.cbr') return 'CBR';
+    if (comic.comicType != null && comic.comicType!.isNotEmpty) {
+      return comic.comicType!.toUpperCase();
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF252542) : const Color(0xFFFFFFFF);
-    final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+    final cardColor = isDark ? AppColorsDark.cardColor : AppColorsLight.cardColor;
+    final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
+    final shadowColor = isDark ? NeoColors.darkShadow : NeoColors.hardShadowColor;
+    final format = _formatBadge();
 
     return AspectRatio(
       aspectRatio: 3 / 4,
       child: Container(
         decoration: BoxDecoration(
           color: cardColor,
-          borderRadius: BorderRadius.circular(8.r * scale),
-          border: Border.all(color: borderColor, width: 2.5),
-          boxShadow: const [
+          borderRadius: BorderRadius.circular(NeoConstants.borderRadius * scale),
+          border: Border.all(color: borderColor, width: NeoConstants.borderWidth),
+          boxShadow: [
             BoxShadow(
-              color: Colors.black,
+              color: shadowColor,
               blurRadius: 0,
-              offset: Offset(4, 4),
+              offset: NeoConstants.shadowOffset,
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular((8 - 2.5).r * scale),
+          borderRadius: BorderRadius.circular(
+            (NeoConstants.borderRadius - NeoConstants.borderWidth).clamp(0.0, double.infinity) * scale,
+          ),
           child: Stack(
             fit: StackFit.expand,
             children: [
+              // Cover thumbnail
               if (comic.picture.isNotEmpty)
                 FileThumbnail(
                   comic.picture,
@@ -53,6 +70,78 @@ class ComicCard extends StatelessWidget {
                 )
               else
                 _buildPlaceholder(isDark, borderColor),
+
+              // Format Badge (CBZ, CBR) at top-left
+              if (format != null)
+                Positioned(
+                  top: 6.h * scale,
+                  left: 6.w * scale,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 6.w * scale,
+                      vertical: 2.h * scale,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColorsLight.indigo,
+                      borderRadius: BorderRadius.circular(2.r * scale),
+                      border: Border.all(
+                        color: isDark ? AppColorsDark.borderColor : Colors.black,
+                        width: 1.5,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black45,
+                          offset: Offset(1.5, 1.5),
+                          blurRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      format,
+                      style: AppTypography.mono(
+                        fontSize: 9.sp * scale,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Edit Action Button at top-right
+              if (onEdit != null)
+                Positioned(
+                  top: 6.h * scale,
+                  right: 6.w * scale,
+                  child: GestureDetector(
+                    onTap: onEdit,
+                    child: Container(
+                      padding: EdgeInsets.all(5.w * scale),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColorsDark.surfaceDeep : AppColorsLight.surfaceColor,
+                        borderRadius: BorderRadius.circular(2.r * scale),
+                        border: Border.all(
+                          color: isDark ? AppColorsDark.borderColor : Colors.black,
+                          width: 1.5,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black45,
+                            offset: Offset(1.5, 1.5),
+                            blurRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.edit,
+                        size: 13.sp * scale,
+                        color: isDark ? AppColorsDark.textColor : AppColorsLight.textColor,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Bottom status & progress panel
               Positioned(
                 left: 0,
                 right: 0,
@@ -60,45 +149,21 @@ class ComicCard extends StatelessWidget {
                 child: Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: 8.w * scale,
-                    vertical: 8.h * scale,
+                    vertical: 7.h * scale,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.7),
+                    color: (isDark ? const Color(0xFF161719) : const Color(0xFF121316))
+                        .withValues(alpha: 0.88),
                     border: Border(
-                      top: BorderSide(color: borderColor, width: 2.5),
+                      top: BorderSide(
+                        color: borderColor,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                   child: _buildBottomRow(isDark, borderColor),
                 ),
               ),
-              if (onEdit != null)
-                Positioned(
-                  top: 8.h * scale,
-                  right: 8.w * scale,
-                  child: GestureDetector(
-                    onTap: onEdit,
-                    child: Container(
-                      padding: EdgeInsets.all(6.w * scale),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFFFF6B9D) : const Color(0xFFFFE156),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black, width: 2),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black,
-                            offset: Offset(2, 2),
-                            blurRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.edit,
-                        size: 14.sp * scale,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -108,7 +173,7 @@ class ComicCard extends StatelessWidget {
 
   Widget _buildPlaceholder(bool isDark, Color borderColor) {
     return Container(
-      color: isDark ? const Color(0xFF252542) : const Color(0xFFFFFFFF),
+      color: isDark ? AppColorsDark.cardColor : AppColorsLight.cardColor,
       child: Center(
         child: Icon(
           Icons.book,
@@ -120,7 +185,7 @@ class ComicCard extends StatelessWidget {
   }
 
   Widget _buildBottomRow(bool isDark, Color borderColor) {
-    final chip = _buildStatusChip(isDark, borderColor);
+    final chip = _buildStatusChip(isDark);
     final showPage = comic.currentReadPage > 0 && !comic.isCompleted;
 
     return Row(
@@ -147,8 +212,8 @@ class ComicCard extends StatelessWidget {
                   'Pág. ${comic.currentReadPage + 1}',
                   maxLines: 1,
                   softWrap: false,
-                  style: GoogleFonts.spaceGrotesk(
-                    fontSize: 12.sp * scale,
+                  style: AppTypography.mono(
+                    fontSize: 11.sp * scale,
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
@@ -160,48 +225,48 @@ class ComicCard extends StatelessWidget {
     );
   }
 
-  Widget? _buildStatusChip(bool isDark, Color borderColor) {
+  Widget? _buildStatusChip(bool isDark) {
     String? label;
     Color? color;
 
     if (comic.isCompleted) {
-      label = 'Completado';
-      color = const Color(0xFFA8E86C);
+      label = 'COMPLETADO';
+      color = AppColorsLight.successColor;
     } else if (comic.isReading) {
-      label = 'Leyendo';
-      color = const Color(0xFFFF9F43);
+      label = 'LEYENDO';
+      color = AppColorsLight.terracotta;
     } else if (comic.currentReadPage == 0) {
-      label = 'Nuevo';
-      color = const Color(0xFF4ECDC4);
+      label = 'NUEVO';
+      color = AppColorsLight.indigo;
     }
 
     if (label == null || color == null) return null;
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: 8.w * scale,
-        vertical: 4.h * scale,
+        horizontal: 6.w * scale,
+        vertical: 3.h * scale,
       ),
       decoration: BoxDecoration(
         color: color,
-        border: Border.all(color: Colors.black, width: 2),
-        borderRadius: BorderRadius.circular(4.r * scale),
+        borderRadius: BorderRadius.circular(2.r * scale),
+        border: Border.all(color: Colors.black, width: 1.5),
         boxShadow: const [
           BoxShadow(
-            color: Colors.black,
-            offset: Offset(2, 2),
+            color: Colors.black45,
+            offset: Offset(1.5, 1.5),
             blurRadius: 0,
           ),
         ],
       ),
       child: Text(
-        label.toUpperCase(),
+        label,
         maxLines: 1,
         softWrap: false,
-        style: GoogleFonts.spaceGrotesk(
-          fontSize: 10.sp * scale,
-          color: Colors.black,
-          fontWeight: FontWeight.w900,
+        style: AppTypography.mono(
+          fontSize: 9.sp * scale,
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
           letterSpacing: 0.5,
         ),
       ),

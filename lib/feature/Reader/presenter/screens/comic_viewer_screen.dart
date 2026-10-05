@@ -3,6 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:manga_reader/core/theme/colors.dart';
+import 'package:manga_reader/core/theme/typography.dart';
+import 'package:manga_reader/core/widgets/neo_button.dart';
+import 'package:manga_reader/core/widgets/neo_loading.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Home/domain/entity/reading_mode.dart';
 import 'package:path/path.dart' as p;
@@ -16,8 +20,7 @@ import '../widgets/vertical_reader.dart';
 /// Full-screen reader.
 ///
 /// Taps: left/right edge turn pages (mirrored in manga mode), top/bottom
-/// edge scroll in webtoon mode, the center shows the controls. Double tap
-/// zooms. Progress is saved automatically.
+/// edge scroll in vertical mode, the center shows the controls. Progress is saved automatically.
 class ComicViewerScreen extends ConsumerStatefulWidget {
   const ComicViewerScreen({super.key, required this.comic});
 
@@ -106,9 +109,11 @@ class _ComicViewerScreenState extends ConsumerState<ComicViewerScreen> {
         if (didPop) _controller.flush();
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFF101113),
         body: pagesAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(
+            child: NeoLoadingIndicator(size: 48),
+          ),
           error: (error, _) => _ReaderMessage(
             icon: Icons.error_outline,
             message: 'No se pudieron cargar las páginas.\n$error',
@@ -117,7 +122,7 @@ class _ComicViewerScreenState extends ConsumerState<ComicViewerScreen> {
           data: (pages) => pages.isEmpty
               ? _ReaderMessage(
                   icon: Icons.image_not_supported_outlined,
-                  message: 'Este cómic no tiene páginas.',
+                  message: 'Este cómic no tiene páginas disponibles.',
                   onBack: _close,
                 )
               : _buildReader(pages, state),
@@ -169,14 +174,16 @@ class _ComicViewerScreenState extends ConsumerState<ComicViewerScreen> {
         Positioned(
           left: 0,
           right: 0,
-          bottom: 12,
+          bottom: 16,
           child: IgnorePointer(
             child: AnimatedOpacity(
               opacity: visible ? 0 : 1,
               duration: duration,
               child: Center(
                 child: ReaderPageIndicator(
-                    page: page, totalPages: pages.length),
+                  page: page,
+                  totalPages: pages.length,
+                ),
               ),
             ),
           ),
@@ -190,7 +197,7 @@ class _ComicViewerScreenState extends ConsumerState<ComicViewerScreen> {
             fromTop: true,
             child: ReaderTopBar(
               title: _title,
-              subtitle: 'Página ${page + 1} de ${pages.length}',
+              subtitle: 'P. ${(page + 1).toString().padLeft(3, '0')} / ${pages.length.toString().padLeft(3, '0')}',
               mode: state.mode,
               onBack: _close,
               onOpenPages: () => _openPages(pages, page),
@@ -270,14 +277,19 @@ class _ReaderMessage extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: ReaderColors.textMuted, size: 48),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: ReaderColors.textMuted),
+              style: AppTypography.body(color: ReaderColors.textMuted, fontSize: 14),
             ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onBack, child: const Text('Volver')),
+            const SizedBox(height: 20),
+            NeoButton(
+              text: 'VOLVER',
+              backgroundColor: AppColorsLight.terracotta,
+              foregroundColor: Colors.white,
+              onPressed: onBack,
+            ),
           ],
         ),
       ),

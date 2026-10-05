@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import '../theme/typography.dart';
 import '../utils/constants.dart';
 import 'neo_button.dart';
 
 class NeoLoadingIndicator extends StatefulWidget {
   final double size;
 
-  const NeoLoadingIndicator({super.key, this.size = 50.0});
+  const NeoLoadingIndicator({super.key, this.size = 46.0});
 
   @override
   State<NeoLoadingIndicator> createState() => _NeoLoadingIndicatorState();
 }
 
-class _NeoLoadingIndicatorState extends State<NeoLoadingIndicator> with SingleTickerProviderStateMixin {
+class _NeoLoadingIndicatorState extends State<NeoLoadingIndicator>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -35,7 +37,8 @@ class _NeoLoadingIndicatorState extends State<NeoLoadingIndicator> with SingleTi
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
-    final primaryColor = isDark ? AppColorsDark.accentColor : AppColorsLight.accentColor;
+    final primaryColor = isDark ? AppColorsDark.terracotta : AppColorsLight.terracotta;
+    final shadowColor = isDark ? NeoColors.darkShadow : NeoColors.hardShadowColor;
 
     return RotationTransition(
       turns: _controller,
@@ -49,22 +52,22 @@ class _NeoLoadingIndicatorState extends State<NeoLoadingIndicator> with SingleTi
             color: borderColor,
             width: NeoConstants.borderWidth,
           ),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: NeoColors.hardShadowColor,
-              offset: Offset(3, 3),
+              color: shadowColor,
+              offset: NeoConstants.shadowOffset,
               blurRadius: 0,
               spreadRadius: 0,
             ),
           ],
         ),
         child: Center(
-          child: Container(
-            width: widget.size * 0.4,
-            height: widget.size * 0.4,
-            decoration: BoxDecoration(
-              color: borderColor,
-              shape: BoxShape.circle,
+          child: SizedBox(
+            width: widget.size * 0.45,
+            height: widget.size * 0.45,
+            child: const CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: Colors.white,
             ),
           ),
         ),
@@ -89,7 +92,8 @@ class NeoShimmer extends StatefulWidget {
   State<NeoShimmer> createState() => _NeoShimmerState();
 }
 
-class _NeoShimmerState extends State<NeoShimmer> with SingleTickerProviderStateMixin {
+class _NeoShimmerState extends State<NeoShimmer>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -98,10 +102,10 @@ class _NeoShimmerState extends State<NeoShimmer> with SingleTickerProviderStateM
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    
-    _animation = Tween<double>(begin: 0.3, end: 0.8).animate(
+
+    _animation = Tween<double>(begin: 0.35, end: 0.85).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -117,7 +121,7 @@ class _NeoShimmerState extends State<NeoShimmer> with SingleTickerProviderStateM
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
-    final baseColor = isDark ? AppColorsDark.dividerColor : AppColorsLight.dividerColor;
+    final baseColor = isDark ? AppColorsDark.surfaceDeep : AppColorsLight.surfaceDeep;
 
     return AnimatedBuilder(
       animation: _animation,
@@ -157,7 +161,9 @@ class NeoErrorWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final errorColor = isDark ? AppColorsDark.errorColor : AppColorsLight.errorColor;
-    
+    final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
+    final shadowColor = isDark ? NeoColors.darkShadow : NeoColors.hardShadowColor;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -170,30 +176,32 @@ class NeoErrorWidget extends StatelessWidget {
                 color: errorColor,
                 borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
                 border: Border.all(
-                  color: isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor,
+                  color: borderColor,
                   width: NeoConstants.borderWidth,
                 ),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                    color: NeoColors.hardShadowColor,
+                    color: shadowColor,
                     offset: NeoConstants.shadowOffset,
                     blurRadius: 0,
                     spreadRadius: 0,
                   ),
                 ],
               ),
-              child: const Icon(Icons.error_outline, size: 48, color: Colors.white),
+              child: const Icon(Icons.error_outline, size: 44, color: Colors.white),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+              style: AppTypography.heading(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColorsDark.textColor : AppColorsLight.textColor,
               ),
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               NeoButton(
                 text: 'REINTENTAR',
                 onPressed: onRetry,
@@ -221,8 +229,10 @@ class NeoEmptyWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final infoColor = isDark ? AppColorsDark.infoColor : AppColorsLight.infoColor;
-    
+    final accentColor = isDark ? AppColorsDark.indigo : AppColorsLight.indigo;
+    final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
+    final shadowColor = isDark ? NeoColors.darkShadow : NeoColors.hardShadowColor;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -230,31 +240,33 @@ class NeoEmptyWidget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: infoColor,
-                shape: BoxShape.circle,
+                color: accentColor,
+                borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
                 border: Border.all(
-                  color: isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor,
+                  color: borderColor,
                   width: NeoConstants.borderWidth,
                 ),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                    color: NeoColors.hardShadowColor,
+                    color: shadowColor,
                     offset: NeoConstants.shadowOffset,
                     blurRadius: 0,
                     spreadRadius: 0,
                   ),
                 ],
               ),
-              child: Icon(icon, size: 48, color: Colors.black),
+              child: Icon(icon, size: 42, color: Colors.white),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+              style: AppTypography.heading(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColorsDark.textColor : AppColorsLight.textColor,
               ),
             ),
           ],
@@ -267,19 +279,25 @@ class NeoEmptyWidget extends StatelessWidget {
 void showNeoSnackBar(BuildContext context, String message, {bool isError = false}) {
   final theme = Theme.of(context);
   final isDark = theme.brightness == Brightness.dark;
-  
-  final bgColor = isError 
+
+  final bgColor = isError
       ? (isDark ? AppColorsDark.errorColor : AppColorsLight.errorColor)
-      : (isDark ? AppColorsDark.successColor : AppColorsLight.successColor);
-      
+      : (isDark ? AppColorsDark.surfaceDeep : AppColorsLight.surfaceColor);
+
   final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
-  final textColor = isError ? Colors.white : Colors.black;
+  final textColor = isError
+      ? Colors.white
+      : (isDark ? AppColorsDark.textColor : AppColorsLight.textColor);
 
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
         message,
-        style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontFamily: 'Space Grotesk'),
+        style: AppTypography.heading(
+          fontSize: 14,
+          color: textColor,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       backgroundColor: bgColor,
       behavior: SnackBarBehavior.floating,
@@ -307,12 +325,13 @@ class NeoLoadingOverlay extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final surfaceColor = isDark ? AppColorsDark.surfaceColor : AppColorsLight.surfaceColor;
     final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
+    final shadowColor = isDark ? NeoColors.darkShadow : NeoColors.hardShadowColor;
 
     return Container(
-      color: Colors.black54,
+      color: Colors.black.withValues(alpha: 0.6),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
           decoration: BoxDecoration(
             color: surfaceColor,
             borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
@@ -320,10 +339,10 @@ class NeoLoadingOverlay extends StatelessWidget {
               color: borderColor,
               width: NeoConstants.borderWidth,
             ),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: NeoColors.hardShadowColor,
-                offset: NeoConstants.shadowOffset,
+                color: shadowColor,
+                offset: const Offset(4, 4),
                 blurRadius: 0,
                 spreadRadius: 0,
               ),
@@ -332,12 +351,14 @@ class NeoLoadingOverlay extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const NeoLoadingIndicator(size: 60),
-              const SizedBox(height: 24),
+              const NeoLoadingIndicator(size: 48),
+              const SizedBox(height: 20),
               Text(
                 message,
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: AppTypography.mono(
+                  fontSize: 13,
                   fontWeight: FontWeight.w800,
+                  color: isDark ? AppColorsDark.textColor : AppColorsLight.textColor,
                   letterSpacing: 1.2,
                 ),
               ),

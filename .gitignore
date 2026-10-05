@@ -44,3 +44,6 @@ app.*.map.json
 
 # Golden test diff output
 test/golden/failures/
+
+# Test coverage
+coverage/

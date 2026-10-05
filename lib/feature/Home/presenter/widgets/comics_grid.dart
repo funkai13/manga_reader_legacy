@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:manga_reader/core/theme/colors.dart';
+import 'package:manga_reader/core/utils/constants.dart';
+import 'package:manga_reader/core/widgets/neo_loading.dart';
 import 'package:manga_reader/feature/Home/presenter/controller/comic_controller.dart';
 
 import '../../../../core/widgets/generic_grid.dart';
@@ -18,60 +19,49 @@ class ComicsGrid extends ConsumerWidget {
 
     final asyncComics = ref.watch(comicControllerProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+    final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
 
     return asyncComics.when(
       data: (comics) => RefreshIndicator(
-          onRefresh: () async {
-            await fetchComics();
+        onRefresh: () async {
+          await fetchComics();
+        },
+        child: GenericGrid(
+          items: comics,
+          maxCrossAxisExtent: 200,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 14,
+          mainAxisExtent: 250,
+          itemBuilder: (comic) {
+            return ComicCard(
+              comic: comic,
+              scale: 1.0,
+            );
           },
-          child: GenericGrid(
-            items: comics,
-            maxCrossAxisExtent: 200,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            mainAxisExtent: 260,
-            itemBuilder: (comic) {
-              return ComicCard(
-                comic: comic,
-                scale: 1.0,
-              );
-            },
-          )),
+        ),
+      ),
       loading: () => Center(
         child: Container(
-          width: 50.w,
-          height: 50.w,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFFFFE156) : const Color(0xFF4ECDC4),
-            border: Border.all(color: textColor, width: 3),
-            boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(4, 4))],
+            color: AppColorsLight.terracotta,
+            borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
+            border: Border.all(color: borderColor, width: NeoConstants.borderWidth),
+            boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(3, 3))],
           ),
           child: const Center(
             child: CircularProgressIndicator(
-              color: Colors.black,
+              color: Colors.white,
               strokeWidth: 3,
             ),
           ),
         ),
       ),
       error: (error, _) => Center(
-        child: Container(
-          padding: EdgeInsets.all(24.w),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF5252),
-            border: Border.all(color: Colors.black, width: 3),
-            boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(4, 4))],
-          ),
-          child: Text(
-            'ERROR:\n$error',
-            style: GoogleFonts.spaceGrotesk(
-              fontWeight: FontWeight.bold,
-              fontSize: 16.sp,
-              color: Colors.white,
-            ),
-            textAlign: TextAlign.center,
-          ),
+        child: NeoErrorWidget(
+          message: 'ERROR:\n$error',
+          onRetry: () => ref.refresh(comicControllerProvider),
         ),
       ),
     );

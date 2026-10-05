@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 class NeoConstants {
-  static const double borderWidth = 2.5;
-  static const Offset shadowOffset = Offset(4, 4);
-  static const double borderRadius = 8.0;
+  static const double borderWidth = 2.0;
+  static const Offset shadowOffset = Offset(2.5, 2.5);
+  static const double borderRadius = 3.0;
   static const double cardElevation = 0;
-  static const Duration animationDuration = Duration(milliseconds: 200);
+  static const Duration animationDuration = Duration(milliseconds: 150);
 }
 
 class ImageCacheConfig {

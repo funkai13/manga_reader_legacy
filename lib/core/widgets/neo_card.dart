@@ -9,6 +9,7 @@ class NeoCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final double? width;
   final double? height;
+  final bool showShadow;
 
   const NeoCard({
     super.key,
@@ -18,6 +19,7 @@ class NeoCard extends StatelessWidget {
     this.padding,
     this.width,
     this.height,
+    this.showShadow = true,
   });
 
   @override
@@ -26,32 +28,49 @@ class NeoCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     
     final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
-    final bgColor = backgroundColor ?? theme.cardColor;
+    final shadowColor = isDark ? NeoColors.darkShadow : NeoColors.hardShadowColor;
+    final bgColor = backgroundColor ?? (isDark ? AppColorsDark.surfaceColor : AppColorsLight.cardColor);
 
-    Widget card = Container(
+    final decoration = BoxDecoration(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
+      border: Border.all(
+        color: borderColor,
+        width: NeoConstants.borderWidth,
+      ),
+      boxShadow: showShadow
+          ? [
+              BoxShadow(
+                color: shadowColor,
+                offset: NeoConstants.shadowOffset,
+                blurRadius: 0,
+                spreadRadius: 0,
+              ),
+            ]
+          : null,
+    );
+
+    if (onTap == null) {
+      return Container(
+        width: width,
+        height: height,
+        padding: padding ?? const EdgeInsets.all(16.0),
+        decoration: decoration,
+        child: child,
+      );
+    }
+
+    return Container(
       width: width,
       height: height,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-        border: Border.all(
-          color: borderColor,
-          width: NeoConstants.borderWidth,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: NeoColors.hardShadowColor,
-            offset: NeoConstants.shadowOffset,
-            blurRadius: 0,
-            spreadRadius: 0,
-          ),
-        ],
-      ),
+      decoration: decoration,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(NeoConstants.borderRadius - NeoConstants.borderWidth),
+          borderRadius: BorderRadius.circular(
+            (NeoConstants.borderRadius - NeoConstants.borderWidth).clamp(0.0, double.infinity),
+          ),
           child: Padding(
             padding: padding ?? const EdgeInsets.all(16.0),
             child: child,
@@ -59,32 +78,5 @@ class NeoCard extends StatelessWidget {
         ),
       ),
     );
-
-    if (onTap == null) {
-      card = Container(
-        width: width,
-        height: height,
-        padding: padding ?? const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          border: Border.all(
-            color: borderColor,
-            width: NeoConstants.borderWidth,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: NeoColors.hardShadowColor,
-              offset: NeoConstants.shadowOffset,
-              blurRadius: 0,
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        child: child,
-      );
-    }
-
-    return card;
   }
 }

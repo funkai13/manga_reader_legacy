@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/colors.dart';
+import '../theme/typography.dart';
 import '../utils/constants.dart';
 import 'neo_button.dart';
 
@@ -28,18 +29,23 @@ class DialogService {
       context,
       title: title,
       message: message,
-      accentColor: isDark ? AppColorsDark.infoColor : AppColorsLight.infoColor,
+      accentColor: isDark ? AppColorsDark.indigo : AppColorsLight.indigo,
       icon: Icons.info_outline,
     );
   }
 
   Future<void> _showDialog(BuildContext context,
-      {required String title, required String message, required Color accentColor, required IconData icon}) {
+      {required String title,
+      required String message,
+      required Color accentColor,
+      required IconData icon}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final borderColor = isDark ? AppColorsDark.borderColor : AppColorsLight.borderColor;
     final surfaceColor = isDark ? AppColorsDark.surfaceColor : AppColorsLight.surfaceColor;
-    
+    final textColor = isDark ? AppColorsDark.textColor : AppColorsLight.textColor;
+    final shadowColor = isDark ? NeoColors.darkShadow : NeoColors.hardShadowColor;
+
     return showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -54,10 +60,10 @@ class DialogService {
               color: borderColor,
               width: NeoConstants.borderWidth,
             ),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: NeoColors.hardShadowColor,
-                offset: NeoConstants.shadowOffset,
+                color: shadowColor,
+                offset: const Offset(4, 4),
                 blurRadius: 0,
                 spreadRadius: 0,
               ),
@@ -67,46 +73,52 @@ class DialogService {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: accentColor,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
                   border: Border.all(
                     color: borderColor,
                     width: NeoConstants.borderWidth,
                   ),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(
-                      color: NeoColors.hardShadowColor,
-                      offset: Offset(2, 2),
+                      color: shadowColor,
+                      offset: NeoConstants.shadowOffset,
                       blurRadius: 0,
                       spreadRadius: 0,
                     ),
                   ],
                 ),
-                child: Icon(icon, size: 40, color: Colors.black),
+                child: Icon(icon, size: 36, color: Colors.white),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleLarge?.copyWith(
+                style: AppTypography.heading(
+                  fontSize: 18,
                   fontWeight: FontWeight.w800,
+                  color: textColor,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium,
+                style: AppTypography.body(
+                  fontSize: 14,
+                  color: isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary,
+                  height: 1.4,
+                ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: NeoButton(
                   text: 'ACEPTAR',
-                  backgroundColor: accentColor,
-                  foregroundColor: Colors.black,
+                  backgroundColor: AppColorsLight.terracotta,
+                  foregroundColor: Colors.white,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),

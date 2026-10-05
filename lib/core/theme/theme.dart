@@ -10,47 +10,55 @@ class AppTheme {
     final textTheme = _getTextTheme(context);
     return ThemeData(
       brightness: Brightness.light,
-      primaryColor: AppColorsLight.primaryColor,
+      primaryColor: AppColorsLight.terracotta,
       scaffoldBackgroundColor: AppColorsLight.backgroundColor,
-      cardColor: AppColorsLight.cardColor,
+      cardColor: AppColorsLight.surfaceColor,
       dividerColor: AppColorsLight.dividerColor,
       colorScheme: const ColorScheme.light(
-        primary: AppColorsLight.accentColor,
-        secondary: AppColorsLight.pinkColor,
-        surface: AppColorsLight.cardColor,
-        onPrimary: AppColorsLight.textColor,
+        primary: AppColorsLight.terracotta,
+        secondary: AppColorsLight.indigo,
+        surface: AppColorsLight.surfaceColor,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
         onSurface: AppColorsLight.textColor,
         error: AppColorsLight.errorColor,
       ),
       textTheme: textTheme.apply(
-          bodyColor: AppColorsLight.textColor,
-          displayColor: AppColorsLight.textColor),
+        bodyColor: AppColorsLight.textColor,
+        displayColor: AppColorsLight.textColor,
+      ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColorsLight.textColor,
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+          textStyle: AppTypography.heading(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColorsLight.accentColor,
-          foregroundColor: AppColorsLight.textColor,
+          backgroundColor: AppColorsLight.terracotta,
+          foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-            side: const BorderSide(color: AppColorsLight.borderColor, width: NeoConstants.borderWidth),
+            side: const BorderSide(
+              color: AppColorsLight.borderColor,
+              width: NeoConstants.borderWidth,
+            ),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+          textStyle: AppTypography.heading(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColorsLight.textColor,
-          side: const BorderSide(color: AppColorsLight.borderColor, width: NeoConstants.borderWidth),
+          side: const BorderSide(
+            color: AppColorsLight.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+          textStyle: AppTypography.heading(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -58,43 +66,61 @@ class AppTheme {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColorsLight.textColor),
         titleTextStyle: textTheme.titleLarge?.copyWith(
-            color: AppColorsLight.textColor,
-            fontWeight: FontWeight.w800),
+          color: AppColorsLight.textColor,
+          fontWeight: FontWeight.w800,
+        ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: AppColorsLight.cardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          side: const BorderSide(color: AppColorsLight.borderColor, width: NeoConstants.borderWidth),
+          side: const BorderSide(
+            color: AppColorsLight.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
       ),
       dividerTheme: const DividerThemeData(
-        color: AppColorsLight.borderColor,
-        thickness: NeoConstants.borderWidth,
+        color: AppColorsLight.dividerColor,
+        thickness: 1.5,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColorsLight.surfaceColor,
+        fillColor: AppColorsLight.cardColor,
+        labelStyle: AppTypography.body(color: AppColorsLight.textSecondary),
+        hintStyle: AppTypography.body(color: AppColorsLight.textSecondary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          borderSide: const BorderSide(color: AppColorsLight.borderColor, width: NeoConstants.borderWidth),
+          borderSide: const BorderSide(
+            color: AppColorsLight.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          borderSide: const BorderSide(color: AppColorsLight.borderColor, width: NeoConstants.borderWidth),
+          borderSide: const BorderSide(
+            color: AppColorsLight.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          borderSide: const BorderSide(color: AppColorsLight.borderColor, width: NeoConstants.borderWidth + 1),
+          borderSide: const BorderSide(
+            color: AppColorsLight.indigo,
+            width: NeoConstants.borderWidth + 0.5,
+          ),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColorsLight.accentColor,
-        contentTextStyle: const TextStyle(color: AppColorsLight.textColor, fontWeight: FontWeight.bold),
+        backgroundColor: AppColorsLight.surfaceColor,
+        contentTextStyle: AppTypography.heading(fontSize: 14, color: AppColorsLight.textColor),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          side: const BorderSide(color: AppColorsLight.borderColor, width: NeoConstants.borderWidth),
+          side: const BorderSide(
+            color: AppColorsLight.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -102,31 +128,45 @@ class AppTheme {
         backgroundColor: AppColorsLight.surfaceColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          side: const BorderSide(color: AppColorsLight.borderColor, width: NeoConstants.borderWidth),
+          side: const BorderSide(
+            color: AppColorsLight.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
         titleTextStyle: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
       ),
-      tabBarTheme: const TabBarThemeData(
+      tabBarTheme: TabBarThemeData(
         labelColor: AppColorsLight.textColor,
-        unselectedLabelColor: AppColorsLight.textColor,
-        indicator: UnderlineTabIndicator(
-          borderSide: BorderSide(color: AppColorsLight.borderColor, width: NeoConstants.borderWidth),
+        unselectedLabelColor: AppColorsLight.textSecondary,
+        indicator: const UnderlineTabIndicator(
+          borderSide: BorderSide(
+            color: AppColorsLight.terracotta,
+            width: 3.0,
+          ),
         ),
-        labelStyle: TextStyle(fontWeight: FontWeight.bold),
+        labelStyle: AppTypography.heading(fontSize: 15, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: AppTypography.heading(fontSize: 15, fontWeight: FontWeight.w500),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColorsLight.surfaceColor,
-        selectedColor: AppColorsLight.accentColor,
+        selectedColor: AppColorsLight.terracotta,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          side: const BorderSide(color: AppColorsLight.borderColor, width: NeoConstants.borderWidth),
+          side: const BorderSide(
+            color: AppColorsLight.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
-        labelStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColorsLight.textColor),
+        labelStyle: AppTypography.mono(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppColorsLight.textColor,
+        ),
       ),
-      textSelectionTheme: TextSelectionThemeData(
-        cursorColor: AppColorsLight.borderColor,
-        selectionColor: AppColorsLight.accentColor.withValues(alpha: 0.3),
-        selectionHandleColor: AppColorsLight.accentColor,
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: AppColorsLight.terracotta,
+        selectionColor: Color(0x40D96B43),
+        selectionHandleColor: AppColorsLight.terracotta,
       ),
     );
   }
@@ -135,47 +175,55 @@ class AppTheme {
     final textTheme = _getTextTheme(context);
     return ThemeData(
       brightness: Brightness.dark,
-      primaryColor: AppColorsDark.primaryColor,
+      primaryColor: AppColorsDark.terracotta,
       scaffoldBackgroundColor: AppColorsDark.backgroundColor,
       cardColor: AppColorsDark.cardColor,
       dividerColor: AppColorsDark.dividerColor,
       colorScheme: const ColorScheme.dark(
-        primary: AppColorsDark.accentColor,
-        secondary: AppColorsDark.pinkColor,
+        primary: AppColorsDark.terracotta,
+        secondary: AppColorsDark.indigo,
         surface: AppColorsDark.cardColor,
-        onPrimary: AppColorsDark.primaryColor,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
         onSurface: AppColorsDark.textColor,
         error: AppColorsDark.errorColor,
       ),
       textTheme: textTheme.apply(
-          bodyColor: AppColorsDark.textColor,
-          displayColor: AppColorsDark.textColor),
+        bodyColor: AppColorsDark.textColor,
+        displayColor: AppColorsDark.textColor,
+      ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColorsDark.textColor,
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+          textStyle: AppTypography.heading(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColorsDark.accentColor,
-          foregroundColor: AppColorsDark.primaryColor,
+          backgroundColor: AppColorsDark.terracotta,
+          foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-            side: const BorderSide(color: AppColorsDark.borderColor, width: NeoConstants.borderWidth),
+            side: const BorderSide(
+              color: AppColorsDark.borderColor,
+              width: NeoConstants.borderWidth,
+            ),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+          textStyle: AppTypography.heading(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColorsDark.textColor,
-          side: const BorderSide(color: AppColorsDark.borderColor, width: NeoConstants.borderWidth),
+          side: const BorderSide(
+            color: AppColorsDark.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+          textStyle: AppTypography.heading(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -183,43 +231,61 @@ class AppTheme {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColorsDark.textColor),
         titleTextStyle: textTheme.titleLarge?.copyWith(
-            color: AppColorsDark.textColor,
-            fontWeight: FontWeight.w800),
+          color: AppColorsDark.textColor,
+          fontWeight: FontWeight.w800,
+        ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: AppColorsDark.cardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          side: const BorderSide(color: AppColorsDark.borderColor, width: NeoConstants.borderWidth),
+          side: const BorderSide(
+            color: AppColorsDark.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
       ),
       dividerTheme: const DividerThemeData(
-        color: AppColorsDark.borderColor,
-        thickness: NeoConstants.borderWidth,
+        color: AppColorsDark.dividerColor,
+        thickness: 1.5,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColorsDark.surfaceColor,
+        fillColor: AppColorsDark.surfaceDeep,
+        labelStyle: AppTypography.body(color: AppColorsDark.textSecondary),
+        hintStyle: AppTypography.body(color: AppColorsDark.textSecondary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          borderSide: const BorderSide(color: AppColorsDark.borderColor, width: NeoConstants.borderWidth),
+          borderSide: const BorderSide(
+            color: AppColorsDark.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          borderSide: const BorderSide(color: AppColorsDark.borderColor, width: NeoConstants.borderWidth),
+          borderSide: const BorderSide(
+            color: AppColorsDark.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          borderSide: const BorderSide(color: AppColorsDark.borderColor, width: NeoConstants.borderWidth + 1),
+          borderSide: const BorderSide(
+            color: AppColorsDark.indigo,
+            width: NeoConstants.borderWidth + 0.5,
+          ),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColorsDark.accentColor,
-        contentTextStyle: const TextStyle(color: AppColorsDark.primaryColor, fontWeight: FontWeight.bold),
+        backgroundColor: AppColorsDark.surfaceColor,
+        contentTextStyle: AppTypography.heading(fontSize: 14, color: AppColorsDark.textColor),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          side: const BorderSide(color: AppColorsDark.borderColor, width: NeoConstants.borderWidth),
+          side: const BorderSide(
+            color: AppColorsDark.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -227,31 +293,45 @@ class AppTheme {
         backgroundColor: AppColorsDark.surfaceColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          side: const BorderSide(color: AppColorsDark.borderColor, width: NeoConstants.borderWidth),
+          side: const BorderSide(
+            color: AppColorsDark.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
         titleTextStyle: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
       ),
-      tabBarTheme: const TabBarThemeData(
+      tabBarTheme: TabBarThemeData(
         labelColor: AppColorsDark.textColor,
-        unselectedLabelColor: AppColorsDark.textColor,
-        indicator: UnderlineTabIndicator(
-          borderSide: BorderSide(color: AppColorsDark.borderColor, width: NeoConstants.borderWidth),
+        unselectedLabelColor: AppColorsDark.textSecondary,
+        indicator: const UnderlineTabIndicator(
+          borderSide: BorderSide(
+            color: AppColorsDark.terracotta,
+            width: 3.0,
+          ),
         ),
-        labelStyle: TextStyle(fontWeight: FontWeight.bold),
+        labelStyle: AppTypography.heading(fontSize: 15, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: AppTypography.heading(fontSize: 15, fontWeight: FontWeight.w500),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColorsDark.surfaceColor,
-        selectedColor: AppColorsDark.accentColor,
+        selectedColor: AppColorsDark.terracotta,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(NeoConstants.borderRadius),
-          side: const BorderSide(color: AppColorsDark.borderColor, width: NeoConstants.borderWidth),
+          side: const BorderSide(
+            color: AppColorsDark.borderColor,
+            width: NeoConstants.borderWidth,
+          ),
         ),
-        labelStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColorsDark.textColor),
+        labelStyle: AppTypography.mono(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppColorsDark.textColor,
+        ),
       ),
-      textSelectionTheme: TextSelectionThemeData(
-        cursorColor: AppColorsDark.borderColor,
-        selectionColor: AppColorsDark.accentColor.withValues(alpha: 0.3),
-        selectionHandleColor: AppColorsDark.accentColor,
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: AppColorsDark.terracotta,
+        selectionColor: Color(0x40D96B43),
+        selectionHandleColor: AppColorsDark.terracotta,
       ),
     );
   }
