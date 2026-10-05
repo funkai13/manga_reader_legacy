@@ -34,6 +34,7 @@ class PagedReaderState extends ReaderViewState<PagedReader> {
   late int _current;
   bool _zoomed = false;
   bool _precachedInitial = false;
+  double _decodeWidth = 0;
 
   int get _itemCount => widget.pages.length + 1; // + end page
 
@@ -47,20 +48,30 @@ class PagedReaderState extends ReaderViewState<PagedReader> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _decodeWidth = readerTargetDecodeWidth(context);
     if (!_precachedInitial) {
       _precachedInitial = true;
       _precache(_current);
     }
   }
 
+  ImageProvider _imageFor(int i) =>
+      readerPageImageProvider(widget.pages[i], _decodeWidth);
+
   @override
   void dispose() {
+    if (_decodeWidth > 0 && widget.pages.isNotEmpty) {
+      evictAllPages(widget.pages.length, _imageFor);
+    }
     _controller.dispose();
     super.dispose();
   }
 
-  void _precache(int page) => precacheAround(context, page, widget.pages.length,
-      (i) => readerPageImage(context, widget.pages[i]));
+  void _precache(int page) {
+    if (_decodeWidth <= 0 || widget.pages.isEmpty) return;
+    precacheAround(context, page, widget.pages.length, _imageFor);
+    evictFarPages(page, widget.pages.length, _imageFor);
+  }
 
   void _onPageChanged(int index) {
     setState(() {
@@ -108,6 +119,7 @@ class PagedReaderState extends ReaderViewState<PagedReader> {
         return ReaderPage(
           key: ValueKey(widget.pages[index].path),
           file: widget.pages[index],
+          targetWidth: _decodeWidth,
           active: index == _current,
           onZoomChanged: (zoomed) {
             if (index == _current && zoomed != _zoomed) {

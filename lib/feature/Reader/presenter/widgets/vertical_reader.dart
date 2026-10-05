@@ -38,6 +38,7 @@ class VerticalReaderState extends ReaderViewState<VerticalReader> {
   double _aspectRatio = VerticalReader.defaultAspectRatio;
   double _extent = 0;
   double _viewport = 0;
+  double _decodeWidth = 0;
   late int _current;
 
   @override
@@ -46,6 +47,15 @@ class VerticalReaderState extends ReaderViewState<VerticalReader> {
     _current = widget.initialPage.clamp(0, widget.pages.length - 1);
     _measureFirstPage();
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _decodeWidth = readerTargetDecodeWidth(context);
+  }
+
+  ImageProvider _imageFor(int i) =>
+      readerPageImageProvider(widget.pages[i], _decodeWidth);
 
   Future<void> _measureFirstPage() async {
     try {
@@ -73,6 +83,9 @@ class VerticalReaderState extends ReaderViewState<VerticalReader> {
 
   @override
   void dispose() {
+    if (_decodeWidth > 0 && widget.pages.isNotEmpty) {
+      evictAllPages(widget.pages.length, _imageFor);
+    }
     _scroll?.dispose();
     super.dispose();
   }
@@ -84,8 +97,10 @@ class VerticalReaderState extends ReaderViewState<VerticalReader> {
     if (page != _current) {
       _current = page;
       widget.onPageChanged(page.clamp(0, widget.pages.length - 1));
-      precacheAround(context, page, widget.pages.length,
-          (i) => readerPageImage(context, widget.pages[i]));
+      if (_decodeWidth > 0 && widget.pages.isNotEmpty) {
+        precacheAround(context, page, widget.pages.length, _imageFor);
+        evictFarPages(page, widget.pages.length, _imageFor);
+      }
     }
     return false;
   }
@@ -135,7 +150,9 @@ class VerticalReaderState extends ReaderViewState<VerticalReader> {
             if (index == widget.pages.length) return widget.endPage;
             return Image(
               key: ValueKey(widget.pages[index].path),
-              image: readerPageImage(context, widget.pages[index]),
+              image: _decodeWidth > 0
+                  ? _imageFor(index)
+                  : readerPageImage(context, widget.pages[index]),
               fit: BoxFit.contain,
               gaplessPlayback: true,
               errorBuilder: (context, error, stackTrace) => const Center(

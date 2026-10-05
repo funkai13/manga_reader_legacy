@@ -3,15 +3,22 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 
+/// Calculates the target decode width for a page: twice the screen width keeps it
+/// sharp when zoomed without holding a full 4000 px scan (~100 MB) in memory.
+double readerTargetDecodeWidth(BuildContext context) {
+  final mediaQuery = MediaQuery.sizeOf(context);
+  final dpr = MediaQuery.devicePixelRatioOf(context);
+  return mediaQuery.width * dpr * 2;
+}
+
+/// Creates a decoded image provider at [targetWidth] pixels.
+ImageProvider readerPageImageProvider(File file, double targetWidth) =>
+    decodedAtWidth(FileImage(file), targetWidth);
+
 /// Decode width for a page: twice the screen width keeps it sharp when
 /// zoomed without holding a full 4000 px scan (~100 MB) in memory.
 ImageProvider readerPageImage(BuildContext context, File file) =>
-    decodedAtWidth(
-      FileImage(file),
-      MediaQuery.sizeOf(context).width *
-          MediaQuery.devicePixelRatioOf(context) *
-          2,
-    );
+    readerPageImageProvider(file, readerTargetDecodeWidth(context));
 
 /// One zoomable page. Double tap zooms into the tapped point and back;
 /// leaving the page ([active] becomes false) resets the zoom.
@@ -21,10 +28,12 @@ class ReaderPage extends StatefulWidget {
     required this.file,
     required this.active,
     required this.onZoomChanged,
+    this.targetWidth,
   });
 
   final File file;
   final bool active;
+  final double? targetWidth;
 
   /// Called only when the page goes from fit to zoomed or back, so the
   /// reader can lock page swipes while panning a zoomed page.
@@ -102,6 +111,10 @@ class _ReaderPageState extends State<ReaderPage>
 
   @override
   Widget build(BuildContext context) {
+    final imageProvider = widget.targetWidth != null && widget.targetWidth! > 0
+        ? readerPageImageProvider(widget.file, widget.targetWidth!)
+        : readerPageImage(context, widget.file);
+
     return GestureDetector(
       onDoubleTapDown: (details) => _doubleTapPosition = details.localPosition,
       onDoubleTap: _onDoubleTap,
@@ -110,7 +123,7 @@ class _ReaderPageState extends State<ReaderPage>
         maxScale: ReaderPage.maxScale,
         child: SizedBox.expand(
           child: Image(
-            image: readerPageImage(context, widget.file),
+            image: imageProvider,
             fit: BoxFit.contain,
             gaplessPlayback: true,
             errorBuilder: (context, error, stackTrace) =>

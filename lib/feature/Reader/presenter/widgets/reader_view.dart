@@ -21,3 +21,29 @@ void precacheAround(
     }
   }
 }
+
+/// Evicts pages outside the [keepRadius] window around [page] to prevent
+/// memory ballooning in long comics (100+ pages).
+void evictFarPages(
+  int page,
+  int count,
+  ImageProvider Function(int index) imageFor, {
+  int keepRadius = 4,
+}) {
+  for (var i = 0; i < count; i++) {
+    if ((i - page).abs() > keepRadius) {
+      imageFor(i).evict();
+    }
+  }
+}
+
+/// Evicts all pages from the image cache and clears live images on reader exit.
+void evictAllPages(
+  int count,
+  ImageProvider Function(int index) imageFor,
+) {
+  for (var i = 0; i < count; i++) {
+    imageFor(i).evict();
+  }
+  PaintingBinding.instance.imageCache.clearLiveImages();
+}
