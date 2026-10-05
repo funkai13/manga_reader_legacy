@@ -1,8 +1,7 @@
 ---
-description: Manifiesto del producto Tinta & Papel, metas de publicaciÃ³n en Google Play Store y estÃ¡ndares para LinkedIn.
+description: Manifiesto del producto Tinta & Papel, metas de publicación en Google Play Store y estándares para LinkedIn.
 trigger: always_on
 ---
-
 # MANIFIESTO DEL PROYECTO: TINTA & PAPEL (PAPER & INK)
 
 > **Manga & Comic Reader Engine con Sistema Neobrutalista e Inteligencia Artificial Local (Edge AI)**  

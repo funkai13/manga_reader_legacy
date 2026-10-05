@@ -1,8 +1,7 @@
 ---
-description: Inventario de dependencias oficiales de producción y desarrollo (Riverpod 3, go_router, sqflite, etc.) y paquetes vetados.
+description: Inventario de dependencias oficiales de producci�n y desarrollo (Riverpod 3, go_router, sqflite, etc.) y paquetes vetados.
 trigger: model_decision
 ---
-
 # MANIFIESTO DE DEPENDENCIAS: TINTA & PAPEL
 
 > **Inventario curado de paquetes oficiales, justificación técnica y compatibilidad.**
@@ -86,4 +85,3 @@ trigger: model_decision
 1. **APIs Cloud de OCR de Pago:** Queda vetado integrar servicios como Google Cloud Vision REST API o AWS Rekognition para tareas de lectura estándar. Toda inferencia de OCR debe ser local vía Google ML Kit para proteger la privacidad del usuario y permitir funcionamiento 100% offline.
 2. **Librerías de Animaciones Pesadas o Incompatibles:** Prohibido el uso de paquetes que capturen el hilo de UI o dependan de webviews para renderizar controles básicos.
 3. **State Management Redundante:** Prohibido mezclar `Provider` clásico, `GetX` o `Bloc`. El único gestor de estado oficial y permitido es **Riverpod 3**.
-4. **Librerías de PDF:** Vetado el uso de PDFium o motores de renderizado PDF en la V1.0.

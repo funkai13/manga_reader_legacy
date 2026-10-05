@@ -1,8 +1,7 @@
 ---
-description: Hoja de ruta y especificación de funcionalidades para V1.0 MVP, V1.5 Edge AI y V2.0 Semántico, catálogo de gamificación y rachas.
+description: Hoja de ruta y especificaci�n de funcionalidades para V1.0 MVP, V1.5 Edge AI y V2.0 Sem�ntico, cat�logo de gamificaci�n y rachas.
 trigger: model_decision
 ---
-
 # HOJA DE RUTA Y ESPECIFICACIÓN DE FEATURES: TINTA & PAPEL
 
 > **Definición de Alcance, Horizontes de Lanzamiento y Sistema de Gamificación.**
@@ -31,7 +30,7 @@ trigger: model_decision
   - *Webtoon:* Desplazamiento vertical continuo y suave.
 - **Zoom Interactivo a 60 FPS:** `InteractiveViewer` fluido con soporte multitáctil y doble toque.
 - **Garantía Anti-OOM (Memoria Acotada):**
-  - `ResizeImage` obligatorio (máximo 2x ancho físico de pantalla o ~1400px).
+  - `ResizeImage` obligatorio (máximo 2x ancho físico de pantalla).
   - Evicción activa de caché (`evictFarPages`) para páginas fuera de un radio de 4.
   - Precarga de páginas adyacentes (`+1`, `-1`).
 - **Navegación Táctil:** Zonas laterales (30% izquierda, 30% derecha) y zona central (40% para controles Neobrutalistas).

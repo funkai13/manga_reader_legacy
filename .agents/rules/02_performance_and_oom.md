@@ -1,8 +1,7 @@
 ---
-description: Reglas de rendimiento innegociables y prevención de OOM para el motor de lectura (ResizeImage a 1400px, evictFarPages, 60 FPS fijos).
+description: Reglas de rendimiento innegociables y prevenci�n de OOM para el motor de lectura (ResizeImage a 1400px, evictFarPages, 60 FPS fijos).
 trigger: always_on
 ---
-
 # REGLAS DE RENDIMIENTO & PREVENCIÓN DE OOM: TINTA & PAPEL
 
 > **Guía maestra de optimización de memoria gráfica, isolates y 60 FPS estables.**

@@ -1,8 +1,7 @@
 ---
-description: Esquema maestro de base de datos SQLite v5 AI-Ready, índices COLLATE NOCASE, tablas de embeddings vectoriales BLOB, FTS5, sesiones y logros.
+description: Esquema maestro de base de datos SQLite v5 AI-Ready, �ndices COLLATE NOCASE, tablas de embeddings vectoriales BLOB, FTS5, sesiones y logros.
 trigger: model_decision
 ---
-
 # ESQUEMA DE BASE DE DATOS SEMÁNTICA & VECTORIAL (AI-READY): TINTA & PAPEL
 
 > **Diseño de base de datos preparado para Búsqueda Semántica, Resúmenes de Capítulos y Recapitulaciones.**
@@ -176,3 +175,11 @@ class VectorMath {
   }
 }
 ```
+
+---
+
+## 4. Beneficios Inmediatos
+
+1. **Cero Migraciones Traumáticas:** Cuando se implemente la feature de IA (resúmenes de tomos o búsqueda semántica), la base de datos ya tendrá las tablas y columnas necesarias sin alterar los cómics guardados.
+2. **Resultados con Número de Página:** La tabla `comic_embeddings` permite responder preguntas como *"¿en qué página pelean contra el titán colosal?"* retornando directamente el número de página exacto gracias a `pageNumber`.
+3. **Desempeño Ultra Ligero:** Todo se ejecuta en el dispositivo sin costos de infraestructura en la nube.
