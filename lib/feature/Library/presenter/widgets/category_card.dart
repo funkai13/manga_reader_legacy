@@ -1,9 +1,9 @@
-import 'package:manga_reader/core/widgets/file_thumbnail.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:manga_reader/core/theme/colors.dart';
+import 'package:manga_reader/core/widgets/file_thumbnail.dart';
 import 'package:manga_reader/feature/Library/domain/entities/category_entity.dart';
+// Keeping import per user request
+import 'package:google_fonts/google_fonts.dart';
 
 class CategoryCard extends StatelessWidget {
   final CategoryEntity category;
@@ -22,6 +22,12 @@ class CategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+    final cardColor = isDark ? const Color(0xFF252542) : const Color(0xFFFFFFFF);
+    final shadowColor = isDark ? const Color(0xFF000000) : const Color(0xFF1A1A2E);
+    final accentColor = const Color(0xFFFFE156);
+    final textColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
 
     return GestureDetector(
       onTap: onTap,
@@ -29,13 +35,17 @@ class CategoryCard extends StatelessWidget {
         aspectRatio: 3 / 4,
         child: Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColorsDark.cardColor : AppColorsLight.cardColor,
-            borderRadius: BorderRadius.circular(12.r * scale),
+            color: cardColor,
+            borderRadius: BorderRadius.circular(8.r * scale),
+            border: Border.all(
+              color: borderColor,
+              width: 2.5,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
-                blurRadius: 12 * scale,
-                offset: const Offset(0, 4),
+                color: shadowColor,
+                offset: const Offset(4, 4),
+                blurRadius: 0,
               ),
             ],
           ),
@@ -49,28 +59,20 @@ class CategoryCard extends StatelessWidget {
                   category.coverPath!,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
-                    color: isDark
-                        ? AppColorsDark.backgroundColor
-                        : AppColorsLight.backgroundColor,
+                    color: cardColor,
                     child: Icon(
                       Icons.image_not_supported,
-                      color: isDark
-                          ? AppColorsDark.textColor.withValues(alpha: 0.5)
-                          : AppColorsLight.textColor.withValues(alpha: 0.5),
+                      color: textColor.withValues(alpha: 0.5),
                     ),
                   ),
                 )
               else
                 Container(
-                  color: isDark
-                      ? AppColorsDark.backgroundColor
-                      : AppColorsLight.backgroundColor,
+                  color: cardColor,
                   child: Icon(
                     Icons.category,
                     size: 48.sp * scale,
-                    color: isDark
-                        ? AppColorsDark.textColor.withValues(alpha: 0.2)
-                        : AppColorsLight.textColor.withValues(alpha: 0.2),
+                    color: textColor.withValues(alpha: 0.2),
                   ),
                 ),
 
@@ -82,9 +84,9 @@ class CategoryCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withValues(alpha: 0.8),
+                      Colors.black.withValues(alpha: 0.9),
                     ],
-                    stops: const [0.5, 1.0],
+                    stops: const [0.4, 1.0],
                   ),
                 ),
               ),
@@ -98,20 +100,36 @@ class CategoryCard extends StatelessWidget {
                   children: [
                     Text(
                       category.name,
-                      style: TextStyle(
+                      style: GoogleFonts.spaceGrotesk(
                         fontSize: 16.sp * scale,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w900,
                         color: Colors.white,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 4.h * scale),
-                    Text(
-                      '${category.count} cómics',
-                      style: TextStyle(
-                        fontSize: 12.sp * scale,
-                        color: Colors.white.withValues(alpha: 0.8),
+                    SizedBox(height: 8.h * scale),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4ECDC4), // Cyan badge
+                        border: Border.all(color: Colors.black, width: 2),
+                        borderRadius: BorderRadius.circular(4.r),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black,
+                            offset: Offset(2, 2),
+                            blurRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '${category.count} cómics',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 12.sp * scale,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
                       ),
                     ),
                   ],
@@ -126,15 +144,23 @@ class CategoryCard extends StatelessWidget {
                   child: GestureDetector(
                     onTap: onEdit,
                     child: Container(
-                      padding: EdgeInsets.all(6.w * scale),
+                      padding: EdgeInsets.all(8.w * scale),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
+                        color: accentColor,
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black, width: 2),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black,
+                            offset: Offset(2, 2),
+                            blurRadius: 0,
+                          ),
+                        ],
                       ),
                       child: Icon(
                         Icons.edit,
-                        size: 14.sp * scale,
-                        color: Colors.white,
+                        size: 16.sp * scale,
+                        color: Colors.black,
                       ),
                     ),
                   ),

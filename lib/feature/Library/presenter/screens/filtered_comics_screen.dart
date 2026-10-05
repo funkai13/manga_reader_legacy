@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Home/domain/provider/comic_provider.dart';
 import 'package:manga_reader/feature/Library/presenter/widgets/comic_grid_widget.dart';
+import 'package:manga_reader/feature/Library/presenter/screens/library_screen.dart';
 
-/// Comics of one category. autoDispose so a list reopened later (e.g. after
-/// a rename) is always read fresh from the DB.
 final filteredComicsProvider = FutureProvider.autoDispose
     .family<List<ComicEntity>, ({String type, String value})>((ref, arg) async {
   final repository = ref.read(comicRepositoryProvider);
@@ -40,13 +40,28 @@ class FilteredComicsScreen extends ConsumerWidget {
     final isTablet = size.shortestSide >= 600;
     final scale = isTablet ? 0.8 : 1.0;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFFF8E7);
+    final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: Text(title),
+        backgroundColor: const Color(0xFFFF6B9D), // Hot pink
+        elevation: 0,
+        shape: Border(bottom: BorderSide(color: borderColor, width: 3)),
+        title: Text(
+          title,
+          style: GoogleFonts.spaceGrotesk(
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF1A1A2E), // Hard black text for pink background
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF1A1A2E)),
       ),
       body: asyncComics.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        loading: () => const NeoLoadingIndicator(),
+        error: (error, stack) => NeoErrorWidget(error: error.toString()),
         data: (comics) => ComicGridWidget(comics: comics, scale: scale),
       ),
     );

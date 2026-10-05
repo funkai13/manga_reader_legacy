@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:manga_reader/feature/Home/domain/entity/comic.dart';
 import 'package:manga_reader/feature/Reader/presenter/screens/comic_viewer_screen.dart';
 import 'package:manga_reader/feature/Home/presenter/screens/edit_comic_screen.dart';
@@ -20,8 +21,33 @@ class ComicGridWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (comics.isEmpty) {
-      return const Center(
-        child: Text('No hay cómics para mostrar'),
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final borderColor = isDark ? const Color(0xFFF0E6D3) : const Color(0xFF1A1A2E);
+
+      return Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF6B9D), // Hot pink
+            border: Border.all(color: borderColor, width: 3),
+            boxShadow: [
+              BoxShadow(
+                color: borderColor,
+                offset: const Offset(4, 4),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          child: Text(
+            'No hay cómics para mostrar',
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF1A1A2E), // Dark text on pink
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
       );
     }
 
