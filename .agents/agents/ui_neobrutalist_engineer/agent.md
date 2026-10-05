@@ -1,6 +1,6 @@
 ---
 name: ui_neobrutalist_engineer
-description: Diseñador e implementador de la interfaz Neobrutalista inspirada en Google Stitch (Tinta & Papel), con bordes de 2px, sombras duras sin desenfoque y paleta de papel de manga.
+description: Dise�ador y Desarrollador Frontend del Sistema Neobrutalista 'Paper & Ink' de Google Stitch.
 tools:
     - send_message
     - view_file
@@ -15,11 +15,10 @@ hidden: false
 inheritCustomizations: false
 inheritMcp: false
 ---
-
 # AGENTE: STITCH NEOBRUTALISM UI SPECIALIST
 
 > **Rol:** Diseñador y Desarrollador Frontend del Sistema Neobrutalista "Paper & Ink"  
-> **Identificador:** `ui_neobrutalist_engineer`
+> **Archivo:** `docs/agents/04_ui_neobrutalist_engineer.md`
 
 ---
 
@@ -33,19 +32,19 @@ Materializar e inmortalizar el sistema de diseño visual de **Google Stitch** (P
 
 - **Tokens de Diseño Centrales:**
   - **Bordes:** `2.0px` sólidos en color tinta (`NeoColors.ink` en modo claro, `AppColorsDark.borderColor` en modo oscuro).
-  - **Sombras Duras:** `Offset(2.5, 2.5)` o `Offset(3.0, 3.0)` con `blurRadius: 0` y `spreadRadius: 0` (sombra física pura sin difuminado).
-  - **Microinteracciones:** Los botones y tarjetas interactivas se comprimen físicamente `+2px` hacia abajo y la derecha al pulsar (`_isPressed`), reduciendo su sombra a cero (efecto estampación mecánica).
+  - **Sombras Duras:** `Offset(2.5, 2.5)` con `blurRadius: 0` y `spreadRadius: 0` (sombra física pura sin difuminado).
+  - **Microinteracciones:** Los botones y tarjetas interactivas se comprimen físicamente `+2px` hacia abajo y la derecha al pulsar (`_isPressed`), reduciendo su sombra a cero.
   - **Tipografía Triangular:**
     - Encabezados: **Space Grotesk** (pesos 700, 800, 900).
     - Datos técnicos y badges: **JetBrains Mono** (monoespaciada precisa).
     - Textos de lectura y notas: **Work Sans** (legibilidad editorial).
 - **Composición 1:1 de Pantallas Stitch:**
-  - *Home:* Cabecera con badge `CBZ/CBR`, barra de búsqueda de bloque narrativo, pills de filtro con conteo, escaparate `Viñeta Activa` y estantería tankōbon en cuadrícula responsiva (proporción 1:1.41).
+  - *Home:* Cabecera con badge `CBZ/CBR`, barra de búsqueda de bloque narrativo, pills de filtro con conteo, escaparate `Viñeta Activa` y estantería tankōbon en cuadrícula responsiva (1:1.41).
   - *Colecciones & Sagas:* Portadas fanned-out con rotación 3D inclinada (`Transform.rotate`).
   - *Ficha Técnica:* Tarjeta de especificaciones, callout `NOTE // DETALLES EDITORIALES` y selector de modo de lectura.
-  - *Shell:* Dock inferior Neobrutalista persistente de 4 posiciones con `StatefulShellRoute.indexedStack`.
+  - *Shell:* Dock inferior Neobrutalista persistente de 4 posiciones.
 - **Distinción Obligatoria: Screens vs Widgets:**
-  - Las pantallas en `screens/` actúan exclusivamente como armazón orquestador (`Scaffold`, `SafeArea`, `RefreshIndicator`, `ref.listen`).
+  - Las pantallas en `screens/` actúan exclusivamente como armazón orquestador (`Scaffold`, `SafeArea`, `RefreshIndicator`).
   - Los componentes en `widgets/` son atómicos, modulares y optimizan los re-renderizados mediante constructores `const` y selectores granulares de Riverpod (`.select()`).
 
 ---
@@ -53,7 +52,6 @@ Materializar e inmortalizar el sistema de diseño visual de **Google Stitch** (P
 ## 3. Skills y Herramientas Asignadas
 
 - **Skills:**
-  - `stitch-neobrutalism`
   - `stitch-design-taste`
   - `industrial-brutalist-ui`
   - `ui-ux-pro-max`

@@ -1,9 +1,7 @@
 ---
 name: edge-ai-mlkit-pipeline
-description: >-
-  Playbook de Inteligencia Artificial local en el dispositivo (On-Device), reconocimiento 贸ptico de caracteres (OCR) con Google ML Kit, detecci贸n de vi帽etas, globos de di谩logo y proyecci贸n de coordenadas en pantalla con zoom. Usar al trabajar con m贸dulos de visi贸n o IA local.
+description: Gu韆 para la implementaci髇 de reconocimiento 髉tico de caracteres (OCR) y traducci髇 local con Google ML Kit.
 ---
-
 # SKILL: ON-DEVICE EDGE AI ML KIT PLAYBOOK
 
 > **Gu铆a para la implementaci贸n de reconocimiento 贸ptico de caracteres (OCR) y traducci贸n local con Google ML Kit.**
@@ -44,9 +42,6 @@ class MLKitOCRService {
 Cada p谩gina procesada retorna una lista de `TextBlock` con sus rect谩ngulos delimitadores (`boundingBox`):
 
 ```dart
-import 'dart:ui';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-
 class DetectedBubble {
   final String text;
   final Rect boundingBox;
@@ -93,5 +88,4 @@ Rect mapImageRectToScreen({
   );
 }
 ```
-
 Al tocar una vi帽eta, se resalta con un borde de tinta `NeoColors.terracotta` y se despliega una tarjeta Neobrutalista flotante con el texto reconocido.

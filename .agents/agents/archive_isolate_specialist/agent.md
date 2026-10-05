@@ -1,6 +1,6 @@
 ---
 name: archive_isolate_specialist
-description: Especialista en descompresión de archivos CBR y CBZ en Isolates secundarios, detección por magic bytes, ordenamiento natural numérico y fingerprinting.
+description: Especialista en Procesamiento de Archivos Comprimidos (CBZ/CBR), Isolates y Metadata.
 tools:
     - send_message
     - view_file
@@ -15,11 +15,10 @@ hidden: false
 inheritCustomizations: false
 inheritMcp: false
 ---
-
 # AGENTE: ISOLATE & ARCHIVE EXTRACTION SPECIALIST
 
 > **Rol:** Especialista en Procesamiento de Archivos Comprimidos (CBZ/CBR), Isolates y Metadata  
-> **Identificador:** `archive_isolate_specialist`
+> **Archivo:** `docs/agents/06_archive_isolate_specialist.md`
 
 ---
 
@@ -38,7 +37,7 @@ Garantizar la ingesta, descompresión, ordenamiento y catalogación de cómics e
 - **Ordenamiento Alfanumérico Natural:** Aplicar comparación de números enteros dentro de los nombres de archivo para garantizar que `capítulo_2.jpg` siempre preceda a `capítulo_10.jpg`.
 - **Estandarización de Archivos Extraídos:** Renombrar las páginas extraídas con numeración formateada de 4 dígitos con ceros a la izquierda (`0001.jpg`, `0002.jpg`, etc.) para prevenir vulnerabilidades de rutas (Zip Slip) y acelerar la indexación del visor.
 - **Generación de Miniaturas:** Crear portadas optimizadas de 400px de ancho en `thumb/cover.jpg` mediante `package:image` en segundo plano para que las cuadrículas de la estantería no consuman recursos innecesarios.
-- **Extracción de ComicInfo.xml:** Parsear metadatos editoriales (Título, Serie, Tomo, Guionista, Género, Sinopsis y orientación Manga/Cómic) de forma automática cuando estén presentes.
+- **Extracción de ComicInfo.xml:** Parsear metadatos editoriales (Título, Serie, Tomo, Guionista, Género, Sinopsis y orientación Manga/Cómic) de forma automática.
 - **Huella Digital Rápida (Fingerprint):** Calcular el hash SHA-1 de `tamaño + primeros 64KB + últimos 64KB` en menos de 10ms para evitar importaciones duplicadas sin tener que leer archivos de cientos de megabytes completos.
 
 ---
@@ -46,7 +45,7 @@ Garantizar la ingesta, descompresión, ordenamiento y catalogación de cómics e
 ## 3. Skills y Herramientas Asignadas
 
 - **Skills:**
-  - `isolate-archive-engine`
+  - `skill_isolate_archive_engine.md`
   - `dart-add-unit-test`
   - `full-output-enforcement`
 

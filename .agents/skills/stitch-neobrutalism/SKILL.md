@@ -1,9 +1,7 @@
 ---
 name: stitch-neobrutalism
-description: >-
-  Guía práctica y especificaciones técnicas para implementar componentes con el sistema de diseño Neobrutalista "Paper & Ink" de Google Stitch (Tinta & Papel). Usar al crear o modificar widgets de presentación, temas y tokens.
+description: Gu�a pr�ctica para implementar componentes con el sistema 'Paper & Ink' de Google Stitch.
 ---
-
 # SKILL: STITCH NEOBRUTALISM DESIGN PLAYBOOK
 
 > **Guía práctica para implementar componentes con el sistema "Paper & Ink" de Google Stitch.**
@@ -14,8 +12,6 @@ description: >-
 
 ### Paleta de Colores (`NeoColors`)
 ```dart
-import 'package:flutter/material.dart';
-
 abstract class NeoColors {
   // Tinta & Bordes
   static const Color ink = Color(0xFF121316);         // Tinta negra editorial profunda
@@ -30,8 +26,6 @@ abstract class NeoColors {
   // Acentos de Color
   static const Color terracotta = Color(0xFFD96B43);   // Acento principal cálido (Manga Ink)
   static const Color mutedIndigo = Color(0xFF3E54A3);  // Acento secundario (Tinta índigo)
-  static const Color highlighterYellow = Color(0xFFFFE156); // Amarillo resaltador
-  static const Color mintGreen = Color(0xFF2EC4B6);        // Verde menta neón (éxito/rachas)
 }
 ```
 

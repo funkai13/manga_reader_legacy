@@ -1,9 +1,7 @@
 ---
 name: testing-playbook
-description: >-
-  Estrategia completa de pruebas unitarias de l贸gica pura, pruebas de interacci贸n de widgets, pruebas de regresi贸n visual Golden tests en temas claro y oscuro, y benchmarks de estr茅s anti-OOM para Tinta & Papel. Usar al escribir o ejecutar suites de prueba.
+description: Gu韆 pr醕tica para la ejecuci髇 y creaci髇 de pruebas automatizadas en Tinta & Papel.
 ---
-
 # SKILL: TESTING PLAYBOOK (WIDGET, GOLDEN, UNIT & STRESS)
 
 > **Gu铆a pr谩ctica para la ejecuci贸n y creaci贸n de pruebas automatizadas en Tinta & Papel.**
@@ -33,6 +31,7 @@ void main() {
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:manga_reader/core/widgets/neo_button.dart';
 
 void main() {
   testWidgets('NeoButton debe cambiar de estado visual y ejecutar callback al tap', (tester) async {
@@ -93,14 +92,11 @@ void main() {
 }
 ```
 
-- Comando de actualizaci贸n de baselines golden:
-  `flutter test test/golden/ --update-goldens`
-
 ---
 
 ## 4. Benchmark de Estr茅s y Evicci贸n de RAM
 
-Simula un usuario pasando 50 p谩ginas a alta velocidad para verificar que no ocurran ca铆das de memoria (OOM) y que `evictFarPages()` mantenga un n煤mero acotado de p谩ginas en memoria:
+Simula un usuario pasando 50 p谩ginas a alta velocidad para verificar que no ocurran ca铆das de memoria (OOM):
 
 ```dart
 testWidgets('Prueba de estr茅s de navegaci贸n r谩pida en lector', (tester) async {

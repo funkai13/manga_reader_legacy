@@ -1,9 +1,7 @@
 ---
 name: isolate-archive-engine
-description: >-
-  Playbook de ingenier铆a para descompresi贸n de archivos de c贸mics CBR y CBZ en Isolates secundarios, validaci贸n de magic bytes, ordenamiento natural num茅rico y fingerprinting SHA-1 instant谩neo (<10ms). Usar al trabajar con servicios de extracci贸n o escaneo de archivos.
+description: Gu韆 para la extracci髇 de archivos CBZ/CBR, ordenamiento natural y hashing de alto rendimiento.
 ---
-
 # SKILL: ISOLATE ARCHIVE ENGINE PLAYBOOK
 
 > **Gu铆a para la extracci贸n de archivos CBZ/CBR, ordenamiento natural y hashing de alto rendimiento.**
@@ -15,8 +13,6 @@ description: >-
 Muchos archivos `.cbr` en realidad son archivos ZIP renombrados o viceversa. El extractor nunca se f铆a de la extensi贸n:
 
 ```dart
-import 'dart:io';
-
 enum ArchiveKind { zip, rar, rar5, unknown }
 
 ArchiveKind detectArchiveKind(String path) {
@@ -63,12 +59,6 @@ int compareNatural(List<Object> a, List<Object> b) {
   }
   return a.length.compareTo(b.length);
 }
-
-List<String> sortPagesNaturally(List<String> pages) {
-  final keyed = pages.map((p) => MapEntry(_naturalKey(p), p)).toList();
-  keyed.sort((a, b) => compareNatural(a.key, b.key));
-  return keyed.map((e) => e.value).toList();
-}
 ```
 
 ---
@@ -78,10 +68,6 @@ List<String> sortPagesNaturally(List<String> pages) {
 Calcula un hash 煤nico del archivo sin tener que leer archivos pesados de 200MB completos:
 
 ```dart
-import 'dart:isolate';
-import 'dart:typed_data';
-import 'package:crypto/crypto.dart';
-
 Future<String> calculateFingerprint(String path, {int chunkSize = 64 * 1024}) async {
   return Isolate.run(() {
     final raf = File(path).openSync();
